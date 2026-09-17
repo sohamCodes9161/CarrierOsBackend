@@ -1,0 +1,157 @@
+{
+  "info": {
+    "name": "CareerOS - Auth Module",
+    "description": "Auth endpoints: register, login, refresh, logout, get current user.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/v1/health", "host": ["{{baseUrl}}"], "path": ["api", "v1", "health"] }
+      }
+    },
+    {
+      "name": "Register",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Returns accessToken', () => pm.expect(json.data.accessToken).to.be.a('string'));",
+              "if (json.data && json.data.accessToken) { pm.environment.set('accessToken', json.data.accessToken); }",
+              "if (json.data && json.data.user && json.data.user._id) { pm.environment.set('userId', json.data.user._id); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] }
+      }
+    },
+    {
+      "name": "Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns accessToken', () => pm.expect(json.data.accessToken).to.be.a('string'));",
+              "if (json.data && json.data.accessToken) { pm.environment.set('accessToken', json.data.accessToken); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+      }
+    },
+    {
+      "name": "Get Current User (protected)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns user email', () => pm.expect(pm.response.json().data.user.email).to.eql(pm.environment.get('testEmail')));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/v1/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "me"] }
+      }
+    },
+    {
+      "name": "Refresh Token (uses cookie automatically)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns a new accessToken', () => pm.expect(json.data.accessToken).to.be.a('string'));",
+              "if (json.data && json.data.accessToken) { pm.environment.set('accessToken', json.data.accessToken); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": { "raw": "{{baseUrl}}/api/v1/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "refresh"] }
+      }
+    },
+    {
+      "name": "Logout",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.environment.unset('accessToken');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": { "raw": "{{baseUrl}}/api/v1/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "logout"] }
+      }
+    },
+    {
+      "name": "Get Current User - No Token (expect 401)",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 401', () => pm.response.to.have.status(401));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/v1/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "me"] }
+      }
+    },
+    {
+      "name": "Register - Duplicate Email (expect 409)",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 409', () => pm.response.to.have.status(409));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] }
+      }
+    },
+    {
+      "name": "Register - Weak Password (expect 400)",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"someoneelse@example.com\",\n  \"password\": \"weak\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] }
+      }
+    }
+  ]
+}

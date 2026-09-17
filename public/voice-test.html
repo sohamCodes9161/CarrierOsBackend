@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CareerOS - Voice Interview Test</title>
+  <link rel="stylesheet" href="voice-test.css" />
+</head>
+<body>
+  <h1>CareerOS Voice Interview - Test Harness</h1>
+  <p class="hint">Dev-only test page. Not part of the product UI - just here to make manually testing the voice flow easy without scripting audio uploads through Postman.</p>
+
+  <section id="login-section" class="card">
+    <h2>1. Log in</h2>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button id="login-btn">Log in</button>
+    <div id="login-status" class="status"></div>
+  </section>
+
+  <section id="start-section" class="card" hidden>
+    <h2>2. Start interview</h2>
+    <input type="text" id="role" placeholder="Role (e.g. Backend Engineer)" value="Backend Engineer" />
+    <select id="difficulty">
+      <option value="easy">Easy</option>
+      <option value="medium" selected>Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+    <select id="interviewType">
+      <option value="technical" selected>Technical</option>
+      <option value="behavioral">Behavioral</option>
+      <option value="mixed">Mixed</option>
+      <option value="dsa">DSA (Data Structures & Algorithms)</option>
+    </select>
+    <input type="text" id="targetSkills" placeholder="Target skills, comma separated (e.g. Python, Django, PostgreSQL)" value="Node.js, MongoDB" />
+    <input type="number" id="totalQuestions" placeholder="Total questions" value="3" min="1" max="20" />
+    <label><input type="checkbox" id="voiceEnabled" checked /> Voice enabled (AI speaks)</label>
+    <button id="start-btn">Start interview</button>
+    <div id="start-status" class="status"></div>
+  </section>
+
+  <section id="interview-section" class="card" hidden>
+    <h2>3. Interview</h2>
+    <p class="hint" id="vad-instruction">
+      Once you finish speaking your answer, simply pause for 2 to 3 seconds and it will be submitted automatically -
+      no need to click anything. You can still click "Stop recording" manually if you'd rather submit sooner.
+      In Chrome/Edge, your words are transcribed live as you talk (shown below as you speak) - no upload wait when
+      you stop. Other browsers fall back to uploading the recording for server-side transcription after you stop,
+      which is slower.
+    </p>
+    <p class="hint">Tip: watch the status line under the record button while speaking - if you see your words appearing live, the fast path is active.</p>
+    <div id="conversation-log"></div>
+
+    <div id="answer-controls">
+      <button id="record-btn">🎤 Record answer</button>
+      <span id="record-status"></span>
+      <div class="vad-meter"><div id="vad-meter-bar"></div></div>
+      <div class="or">or</div>
+      <textarea id="text-answer" placeholder="Type your answer instead"></textarea>
+      <button id="submit-text-btn">Submit typed answer</button>
+    </div>
+  </section>
+
+  <script src="voice-test.js"></script>
+</body>
+</html>

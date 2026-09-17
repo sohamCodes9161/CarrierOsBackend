@@ -1,0 +1,283 @@
+{
+  "info": {
+    "name": "CareerOS - Interview Module",
+    "description": "Text-based mock interview + Groq/Edge-TTS voice layer. Run Auth -> Login first. Requests 1-5 test the full text-mode lifecycle in order. Requests 1b/1c test the voice layer's background audio synthesis (audio is now generated AFTER the response, not blocking it - see README Module 4c). For the full voice loop with real microphone input, use the /test/voice-test.html page served directly by the backend instead.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Start Interview (3 questions, text mode)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Status is in_progress', () => pm.expect(json.data.interview.status).to.eql('in_progress'));",
+              "pm.test('Exactly one question generated', () => pm.expect(json.data.interview.questions).to.have.lengthOf(1));",
+              "pm.environment.set('interviewId', json.data.interview._id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"role\": \"Backend Engineer\",\n  \"difficulty\": \"medium\",\n  \"interviewType\": \"technical\",\n  \"targetSkills\": [\"Node.js\", \"MongoDB\"],\n  \"totalQuestions\": 3,\n  \"voiceEnabled\": false\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/v1/interviews/start", "host": ["{{baseUrl}}"], "path": ["api", "v1", "interviews", "start"] }
+      }
+    },
+    {
+      "name": "1b. Start Interview WITH voice (audio fields null at first - synthesized in background)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response returns fast (audio not awaited)', () => pm.expect(pm.response.responseTime).to.be.below(8000));",
+              "pm.test('greetingAudioUrl is null immediately (synthesis runs in background)', () => pm.expect(json.data.interview.greetingAudioUrl).to.be.null);",
+              "pm.environment.set('voiceInterviewId', json.data.interview._id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"role\": \"Backend Engineer\",\n  \"difficulty\": \"easy\",\n  \"interviewType\": \"technical\",\n  \"targetSkills\": [],\n  \"totalQuestions\": 3,\n  \"voiceEnabled\": true\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/v1/interviews/start", "host": ["{{baseUrl}}"], "path": ["api", "v1", "interviews", "start"] },
+        "description": "The response should return in a couple seconds (just the LLM question-gen call), NOT wait on TTS. Audio URLs will be null here by design - check the next request after waiting ~15-20s for the background synthesis to finish."
+      }
+    },
+    {
+      "name": "1c. Get Interview - check background audio arrived (wait ~15-20s after 1b before running this)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const greetingUrl = json.data.interview.greetingAudioUrl;",
+              "if (greetingUrl) {",
+              "  pm.test('greetingAudioUrl is now a Cloudinary link', () => pm.expect(greetingUrl).to.include('cloudinary'));",
+              "  console.log('Greeting audio ready:', greetingUrl);",
+              "} else {",
+              "  console.warn('Audio not ready yet - wait longer and re-run this request, or check server logs for a background synthesis failure.');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/v1/interviews/{{voiceInterviewId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "interviews", "{{voiceInterviewId}}"] }
+      }
+    },
+    {
+      "name": "Start - DSA Interview Type",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('interviewType is dsa', () => pm.expect(json.data.interview.interviewType).to.eql('dsa'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"role\": \"Software Engineer\",\n  \"difficulty\": \"medium\",\n  \"interviewType\": \"dsa\",\n  \"targetSkills\": [\"Python\", \"Algorithms\"],\n  \"totalQuestions\": 3,\n  \"voiceEnabled\": false\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/v1/interviews/start", "host": ["{{baseUrl}}"], "path": ["api", "v1", "interviews", "start"] },
+        "description": "Confirms the DSA interview type works, and role/targetSkills accept arbitrary domains beyond backend (Python here)."
+      }
+    },
+    {
+      "name": "Start - Long Interview (12 questions, above old 10-question cap)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('totalQuestions is 12', () => pm.expect(json.data.interview.totalQuestions).to.eql(12));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"role\": \"Frontend Engineer\",\n  \"difficulty\": \"easy\",\n  \"interviewType\": \"technical\",\n  \"targetSkills\": [\"React\", \"CSS\"],\n  \"totalQuestions\": 12,\n  \"voiceEnabled\": false\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/v1/interviews/start", "host": ["{{baseUrl}}"], "path": ["api", "v1", "interviews", "start"] }
+      }
+    },
+    {
+      "name": "2. Answer Question 1",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Still in_progress', () => pm.expect(json.data.interview.status).to.eql('in_progress'));",
+              "pm.test('Question 2 was generated', () => pm.expect(json.data.interview.questions).to.have.lengthOf(2));",
+              "pm.test('Question 1 has an evaluation', () => pm.expect(json.data.interview.questions[0].evaluation).to.not.be.null);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"answerText\": \"I would use Express middleware to catch errors and pass them to a centralized error handler via next(err). I'd also validate input with a schema library and use async/await with a wrapper to avoid unhandled promise rejections.\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/v1/interviews/{{interviewId}}/answer", "host": ["{{baseUrl}}"], "path": ["api", "v1", "interviews", "{{interviewId}}", "answer"] }
+      }
+    },
+    {
+      "name": "3. Answer Question 2",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Question 3 was generated', () => pm.expect(json.data.interview.questions).to.have.lengthOf(3));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"answerText\": \"MongoDB indexes speed up queries by avoiding full collection scans, but they add write overhead and use extra disk space, so you should only index fields you actually query or sort on frequently.\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/interviews/{{interviewId}}/answer", "host": ["{{baseUrl}}"], "path": ["api", "v1", "interviews", "{{interviewId}}", "answer"] }
+      }
+    },
+    {
+      "name": "4. Answer Question 3 (final - expect completion + report)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Interview is now completed', () => pm.expect(json.data.interview.status).to.eql('completed'));",
+              "pm.test('No 4th question was generated', () => pm.expect(json.data.interview.questions).to.have.lengthOf(3));",
+              "pm.test('Final report exists with overallScore', () => pm.expect(json.data.interview.finalReport.overallScore).to.be.a('number'));",
+              "pm.test('readyForRole is a boolean', () => pm.expect(json.data.interview.finalReport.readyForRole).to.be.a('boolean'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"answerText\": \"I'd design the schema with normalized references for data that changes often and embedding for data that's always read together, balancing query performance against write complexity.\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/interviews/{{interviewId}}/answer", "host": ["{{baseUrl}}"], "path": ["api", "v1", "interviews", "{{interviewId}}", "answer"] }
+      }
+    },
+    {
+      "name": "5. Answering a Completed Interview (expect 400)",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"answerText\": \"This should fail since the interview is done.\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/interviews/{{interviewId}}/answer", "host": ["{{baseUrl}}"], "path": ["api", "v1", "interviews", "{{interviewId}}", "answer"] }
+      }
+    },
+    {
+      "name": "Start - Invalid Difficulty (expect 400)",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"role\": \"Backend Engineer\",\n  \"difficulty\": \"impossible\",\n  \"interviewType\": \"technical\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/interviews/start", "host": ["{{baseUrl}}"], "path": ["api", "v1", "interviews", "start"] }
+      }
+    },
+    {
+      "name": "Start - totalQuestions above max 20 (expect 400)",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"role\": \"Backend Engineer\",\n  \"difficulty\": \"medium\",\n  \"interviewType\": \"technical\",\n  \"totalQuestions\": 25\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/interviews/start", "host": ["{{baseUrl}}"], "path": ["api", "v1", "interviews", "start"] }
+      }
+    },
+    {
+      "name": "List My Interviews",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns an array', () => pm.expect(pm.response.json().data.interviews).to.be.an('array'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/v1/interviews", "host": ["{{baseUrl}}"], "path": ["api", "v1", "interviews"] }
+      }
+    },
+    {
+      "name": "Get Single Interview",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/v1/interviews/{{interviewId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "interviews", "{{interviewId}}"] }
+      }
+    }
+  ]
+}

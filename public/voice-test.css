@@ -1,0 +1,87 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  max-width: 700px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  color: #1a1a1a;
+  background: #fafafa;
+}
+
+h1 { font-size: 1.4rem; }
+.hint { color: #666; font-size: 0.85rem; margin-bottom: 1.5rem; }
+
+.card {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+input, select, textarea, button {
+  display: block;
+  width: 100%;
+  margin: 0.4rem 0;
+  padding: 0.5rem;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+textarea { min-height: 60px; resize: vertical; }
+
+button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+button:hover { background: #1d4ed8; }
+button:disabled { background: #aaa; cursor: not-allowed; }
+
+#record-btn.recording { background: #dc2626; }
+
+label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; margin: 0.5rem 0; }
+label input { width: auto; margin: 0; }
+
+.status { font-size: 0.85rem; margin-top: 0.5rem; }
+.status.error { color: #dc2626; }
+.status.success { color: #16a34a; }
+
+.or { text-align: center; color: #999; font-size: 0.8rem; margin: 0.5rem 0; }
+
+#conversation-log { margin-bottom: 1rem; }
+
+.turn {
+  border-left: 3px solid #2563eb;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  background: #f5f7ff;
+  border-radius: 0 6px 6px 0;
+}
+.turn.answer { border-left-color: #16a34a; background: #f0fdf4; }
+.turn.report { border-left-color: #ea580c; background: #fff7ed; }
+
+.turn .label { font-weight: 600; font-size: 0.8rem; text-transform: uppercase; color: #555; }
+.turn .text { margin: 0.3rem 0; white-space: pre-wrap; }
+.turn audio { width: 100%; margin-top: 0.3rem; }
+.turn .meta { font-size: 0.8rem; color: #777; }
+.turn .audio-loading { font-size: 0.8rem; color: #999; font-style: italic; margin-top: 0.3rem; }
+
+.vad-meter {
+  width: 100%;
+  height: 8px;
+  background: #eee;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0.4rem 0;
+}
+#vad-meter-bar {
+  height: 100%;
+  width: 0%;
+  background: #16a34a;
+  transition: width 60ms linear;
+}
+#vad-meter-bar.silent { background: #d1d5db; }

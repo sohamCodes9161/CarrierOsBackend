@@ -1,0 +1,191 @@
+{
+  "info": {
+    "name": "CareerOS - Roadmap Module",
+    "description": "Personalized learning roadmap generation. Run Auth -> Login and generate a Career Profile first (roadmap generation requires one to exist).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Generate Roadmap (role only, no explicit skills)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Returns nodes array', () => pm.expect(json.data.roadmap.nodes).to.be.an('array'));",
+              "pm.test('Every node has a learningOrder', () => json.data.roadmap.nodes.forEach(n => pm.expect(n.learningOrder).to.be.a('number')));",
+              "pm.test('Every node has a valid priorityLabel', () => json.data.roadmap.nodes.forEach(n => pm.expect(['critical','high','medium','low']).to.include(n.priorityLabel)));",
+              "pm.test('Nodes are returned in learningOrder sequence', () => {",
+              "  const orders = json.data.roadmap.nodes.map(n => n.learningOrder);",
+              "  const sorted = [...orders].sort((a,b) => a-b);",
+              "  pm.expect(orders).to.eql(sorted);",
+              "});",
+              "pm.test('Returns milestones', () => pm.expect(json.data.roadmap.milestones).to.be.an('array'));",
+              "pm.test('Returns totalEstimatedDurationDays', () => pm.expect(json.data.roadmap.totalEstimatedDurationDays).to.be.a('number'));",
+              "if (json.data.roadmap._id) { pm.environment.set('roadmapId', json.data.roadmap._id); }",
+              "if (json.data.roadmap.nodes && json.data.roadmap.nodes[0]) { pm.environment.set('roadmapNodeId', json.data.roadmap.nodes[0].id); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"targetRole\": \"Backend Engineer\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/roadmap/generate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "roadmap", "generate"] },
+        "description": "No targetSkills given - the AI infers what a Backend Engineer role typically needs, filtered against your Career Profile's known skills."
+      }
+    },
+    {
+      "name": "Generate Roadmap (with explicit target skills)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('skillGap reflects the explicit list', () => {",
+              "  pm.expect(json.data.roadmap.skillGap.missing).to.be.an('array');",
+              "  pm.expect(json.data.roadmap.skillGap.alreadyHave).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"targetRole\": \"Backend Engineer\",\n  \"targetSkills\": [\"Docker\", \"Kubernetes\", \"System Design\", \"Node.js\"]\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/roadmap/generate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "roadmap", "generate"] },
+        "description": "Explicit target skills (e.g. pasted from a job description) - skillGap.alreadyHave/missing will reflect exactly this list."
+      }
+    },
+    {
+      "name": "Generate - No Career Profile (expect 400)",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"targetRole\": \"Backend Engineer\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/roadmap/generate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "roadmap", "generate"] },
+        "description": "Only returns 400 if you have NOT generated a Career Profile yet on this account. Run the Career Profile collection first if you want to see this pass."
+      }
+    },
+    {
+      "name": "Generate - No Auth (expect 401)",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 401', () => pm.response.to.have.status(401));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"targetRole\": \"Backend Engineer\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/roadmap/generate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "roadmap", "generate"] }
+      }
+    },
+    {
+      "name": "List My Roadmaps",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns an array', () => pm.expect(pm.response.json().data.roadmaps).to.be.an('array'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/v1/roadmap", "host": ["{{baseUrl}}"], "path": ["api", "v1", "roadmap"] }
+      }
+    },
+    {
+      "name": "Get Single Roadmap",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/v1/roadmap/{{roadmapId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "roadmap", "{{roadmapId}}"] }
+      }
+    },
+    {
+      "name": "Update Node Status (mark completed)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const node = json.data.roadmap.nodes.find(n => n.id === pm.environment.get('roadmapNodeId'));",
+              "pm.test('Node status updated to completed', () => pm.expect(node.status).to.eql('completed'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"completed\"\n}" },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/roadmap/{{roadmapId}}/nodes/{{roadmapNodeId}}/status",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "roadmap", "{{roadmapId}}", "nodes", "{{roadmapNodeId}}", "status"]
+        }
+      }
+    },
+    {
+      "name": "Update Node Status - Invalid Status (expect 400)",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"done\"\n}" },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/roadmap/{{roadmapId}}/nodes/{{roadmapNodeId}}/status",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "roadmap", "{{roadmapId}}", "nodes", "{{roadmapNodeId}}", "status"]
+        }
+      }
+    },
+    {
+      "name": "Regenerate Roadmap (same role - should upsert, not duplicate)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Same roadmap _id as before (upserted, not duplicated)', () => pm.expect(json.data.roadmap._id).to.eql(pm.environment.get('roadmapId')));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"targetRole\": \"Backend Engineer\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/roadmap/generate", "host": ["{{baseUrl}}"], "path": ["api", "v1", "roadmap", "generate"] },
+        "description": "Generating again for the exact same targetRole should update the existing roadmap in place (upsert), not create a duplicate document."
+      }
+    }
+  ]
+}
