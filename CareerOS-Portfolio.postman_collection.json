@@ -1,0 +1,341 @@
+{
+  "info": {
+    "name": "CareerOS - Portfolio Module",
+    "description": "Personal portfolio: draft/edit privately, then publish to a public slug URL. Run Auth -> Login first. Requests are grouped and meant to run roughly in order. The 'projects' section endpoints are representative - experience/education/achievements follow the exact same add/update/delete/reorder pattern, just with different field shapes (see README).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Get My Portfolio (auto-creates if none exists)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('isPublished starts false', () => pm.expect(json.data.portfolio.isPublished).to.eql(false));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio"] }
+      }
+    },
+    {
+      "name": "2. Update Portfolio Basics (headline, bio, contact)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Headline saved', () => pm.expect(json.data.portfolio.headline).to.eql('Backend Engineer | Node.js & MongoDB'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"headline\": \"Backend Engineer | Node.js & MongoDB\",\n  \"bio\": \"I build reliable backend systems and enjoy solving real-world problems with clean, tested code.\",\n  \"contact\": {\n    \"email\": \"jane@example.com\",\n    \"location\": \"Remote\",\n    \"github\": \"https://github.com/janedoe\"\n  }\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio"] }
+      }
+    },
+    {
+      "name": "3. Quick-Start (pre-fill from Career Profile + GitHub)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio/quick-start", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio", "quick-start"] },
+        "description": "Requires a Career Profile or GitHub analysis to already exist. Safe to run more than once - deduped, won't create duplicate skills/projects."
+      }
+    },
+    {
+      "name": "4. Add a Project",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const added = json.data.portfolio.projects[json.data.portfolio.projects.length - 1];",
+              "pm.environment.set('portfolioProjectId', added._id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Task Management API\",\n  \"description\": \"A REST API for managing tasks with JWT auth and role-based access.\",\n  \"techStack\": [\"Node.js\", \"Express\", \"MongoDB\"],\n  \"githubUrl\": \"https://github.com/janedoe/task-api\",\n  \"featured\": true\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio/projects", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio", "projects"] }
+      }
+    },
+    {
+      "name": "5. Update the Project",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"liveUrl\": \"https://task-api-demo.example.com\"\n}" },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/portfolio/projects/{{portfolioProjectId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "portfolio", "projects", "{{portfolioProjectId}}"]
+        }
+      }
+    },
+    {
+      "name": "6. Improve Content with AI (bio)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns improvedText', () => pm.expect(json.data.improvedText).to.be.a('string'));",
+              "console.log('Suggested improved bio:', json.data.improvedText);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"section\": \"bio\",\n  \"text\": \"i like coding and make apps sometimes good ones\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio/improve-content", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio", "improve-content"] },
+        "description": "Suggestion only - review the improvedText, then PATCH /portfolio yourself to actually apply it. Never auto-applied."
+      }
+    },
+    {
+      "name": "7. Check Publish Readiness (should be missing slug)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Not ready yet - missing a slug', () => {",
+              "  pm.expect(json.data.ready).to.eql(false);",
+              "  pm.expect(json.data.missing.some(m => m.includes('slug'))).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio/publish-readiness", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio", "publish-readiness"] }
+      }
+    },
+    {
+      "name": "8. Check Slug Availability",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns an availability object', () => pm.expect(pm.response.json().data).to.have.property('available'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio/slug-availability/{{testPortfolioSlug}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio", "slug-availability", "{{testPortfolioSlug}}"] },
+        "description": "Public - no auth needed. Try 'admin' as the slug too and confirm it's unavailable with reason 'reserved'."
+      }
+    },
+    {
+      "name": "9. Set Slug",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Slug saved', () => pm.expect(json.data.portfolio.slug).to.eql(pm.environment.get('testPortfolioSlug')));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"slug\": \"{{testPortfolioSlug}}\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio/slug", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio", "slug"] }
+      }
+    },
+    {
+      "name": "10. Publish",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('isPublished is now true', () => pm.expect(json.data.portfolio.isPublished).to.eql(true));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio/publish", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio", "publish"] }
+      }
+    },
+    {
+      "name": "11. View Public Portfolio (no auth)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Does NOT include internal fields', () => {",
+              "  pm.expect(json.data.portfolio._id).to.be.undefined;",
+              "  pm.expect(json.data.portfolio.user).to.be.undefined;",
+              "  pm.expect(json.data.portfolio.viewCount).to.be.undefined;",
+              "});",
+              "pm.test('Includes public content', () => pm.expect(json.data.portfolio.headline).to.be.a('string'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio/public/{{testPortfolioSlug}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio", "public", "{{testPortfolioSlug}}"] }
+      }
+    },
+    {
+      "name": "12. View Nonexistent Public Portfolio (expect 404)",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 404', () => pm.response.to.have.status(404));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio/public/this-slug-should-not-exist-zzz", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio", "public", "this-slug-should-not-exist-zzz"] }
+      }
+    },
+    {
+      "name": "13. Reorder Projects",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"orderedIds\": [\"{{portfolioProjectId}}\"]\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio/projects/reorder", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio", "projects", "reorder"] },
+        "description": "If you added more than one project (e.g. via quick-start), include ALL their ids here, in the desired order - this endpoint requires the full current set, not a partial list."
+      }
+    },
+    {
+      "name": "14. Unpublish",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('isPublished is now false', () => pm.expect(pm.response.json().data.portfolio.isPublished).to.eql(false));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio/unpublish", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio", "unpublish"] }
+      }
+    },
+    {
+      "name": "15. View Public Portfolio After Unpublish (expect 404, same as nonexistent)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404 - identical to a nonexistent slug, does not reveal it exists but is unpublished', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio/public/{{testPortfolioSlug}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio", "public", "{{testPortfolioSlug}}"] }
+      }
+    },
+    {
+      "name": "Delete the Project",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/portfolio/projects/{{portfolioProjectId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "portfolio", "projects", "{{portfolioProjectId}}"]
+        }
+      }
+    },
+    {
+      "name": "Set Reserved Slug (expect 400)",
+      "event": [
+        { "listen": "test", "script": { "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));"], "type": "text/javascript" } }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"slug\": \"admin\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/portfolio/slug", "host": ["{{baseUrl}}"], "path": ["api", "v1", "portfolio", "slug"] }
+      }
+    }
+  ]
+}

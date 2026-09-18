@@ -389,3 +389,57 @@ Import `CareerOS-Roadmap.postman_collection.json`. You need a Career Profile gen
 - [ ] Generate again for the *same* target role → same roadmap `_id` comes back (upserted), not a duplicate
 - [ ] Generate for a *different* target role → a separate roadmap document is created
 - [ ] Try a role clearly covered by your existing skills (per your Career Profile) → the roadmap should be short/targeted and `overallSummary` should say so honestly, not pad the list with things you already know
+
+---
+
+## Module 7: Portfolio — the last V1 module
+
+This completes the original module set (Auth → Resume/GitHub/Interview → Career Profile → Roadmap/Portfolio). No AI dependency chain here beyond one optional content-polish call - this module is mostly structured CRUD plus a draft/publish flow, closer to a lightweight CMS than the analysis-heavy modules before it.
+
+### Design choices, and why
+- **Draft vs published, like every real portfolio/social platform** (LinkedIn, Behance, Linktree) - you build and edit privately; nothing is public until you explicitly call `/publish`. A dedicated `/publish-readiness` endpoint tells the frontend exactly what's missing (slug, headline, bio, at least one project or experience entry) *before* a publish attempt fails, rather than just erroring.
+- **Public endpoint gives the same 404 for "doesn't exist" and "exists but unpublished"** - deliberately, so the public API can never be used to confirm someone has a draft portfolio sitting unfinished.
+- **Public endpoint uses explicit field selection**, never a raw document spread - internal fields (user id, view count, timestamps) structurally cannot leak through it, even if the schema grows later.
+- **Images are external URLs only**, per your call - no Cloudinary upload endpoint for this module. `imageUrl` is just a plain string field the user pastes a link into.
+- **Quick-start is idempotent** - pulls skills from your Career Profile and up to 5 top GitHub repos as suggested projects, deduplicated against whatever's already there (by normalized skill name, and by `githubUrl` for projects), so it's safe to click more than once without creating duplicates.
+- **AI content improvement is suggest-only** - `POST /improve-content` returns polished text for a section (headline/bio/project/experience/achievement description); it never auto-applies. You review it, then `PATCH` yourself if you want it. Same "AI suggests, human approves" pattern as the resume bullet rewrites.
+- **Section CRUD (projects/experience/education/achievements) is DRY underneath, explicit on top** - one shared set of service functions handles add/update/delete/reorder for all four sections (they're structurally identical: an array of items with an `order` field), but the routes and controllers stay written out explicitly per section rather than a dynamic loop, so the code stays easy to read and defend.
+
+### What's included
+- One portfolio per user (`findOneAndUpdate` upsert for top-level fields, same anti-race-condition pattern used elsewhere)
+- Full CRUD + reorder for projects, experience, education, achievements
+- Slug system: format validation, a reserved-word list (`admin`, `api`, `roadmap`, etc. - can't collide with real routes), and a public "is this available" check endpoint (the same UX pattern as checking a username before committing to it)
+- View counter, incremented atomically in the same query that fetches the public portfolio (no separate read+write)
+- 88 new automated tests (306 total project-wide) - including dedicated tests proving quick-start's idempotency, the public endpoint's field allow-listing, and that unpublished vs. nonexistent slugs produce byte-identical error responses
+
+### API Endpoints
+
+| Method | Endpoint | Auth | Notes |
+|---|---|---|---|
+| GET | `/api/v1/portfolio` | required | Own portfolio, auto-created empty on first access |
+| PATCH | `/api/v1/portfolio` | required | Update headline/bio/contact/skills/templateId/themeColor |
+| POST | `/api/v1/portfolio/quick-start` | required | Pre-fill from Career Profile + GitHub, idempotent |
+| GET | `/api/v1/portfolio/publish-readiness` | required | `{ ready, missing: [...] }` |
+| POST | `/api/v1/portfolio/publish` | required | Fails with a clear 400 listing what's missing if not ready |
+| POST | `/api/v1/portfolio/unpublish` | required | Takes the public page down without deleting data |
+| PATCH | `/api/v1/portfolio/slug` | required | Format + reserved-word + uniqueness checked |
+| GET | `/api/v1/portfolio/slug-availability/:slug` | **public** | Username-style availability check |
+| POST | `/api/v1/portfolio/improve-content` | required | `{ section, text }` → `{ improvedText, changesSummary }`, never auto-applied |
+| POST/PATCH/DELETE | `/api/v1/portfolio/{projects\|experience\|education\|achievements}[/:itemId]` | required | Standard section CRUD |
+| PATCH | `/api/v1/portfolio/{section}/reorder` | required | `{ orderedIds }` - must include every current item's id exactly once |
+| GET | `/api/v1/portfolio/public/:slug` | **public** | Published portfolio only, field-limited response |
+
+### Postman
+Import `CareerOS-Portfolio.postman_collection.json` and run roughly in the numbered order (1-15) - it walks the full lifecycle: create → fill in basics → quick-start → add a project → AI-polish the bio → check readiness → claim a slug → publish → view publicly → confirm internal fields are absent → unpublish → confirm the public view now 404s identically to a nonexistent slug.
+
+### What to test / green-flag
+- [ ] `GET /portfolio` on a brand-new account → auto-creates an empty portfolio, doesn't error
+- [ ] Try `/publish` before setting a slug/headline/bio → 400 listing exactly what's missing
+- [ ] Run quick-start, then run it again → skills/projects count should NOT double
+- [ ] Add a project, then fetch `GET /portfolio/public/:slug` (after publishing) → confirm `_id`, `user`, and `viewCount` do NOT appear anywhere in the response
+- [ ] View a public portfolio a few times → view count increments (check via your own authenticated `GET /portfolio`, since it's intentionally not exposed publicly)
+- [ ] Try claiming a reserved slug like `admin` or `api` → 400
+- [ ] Try claiming a slug another account already has → 409
+- [ ] Publish, confirm the public page works, then unpublish → confirm the public page now 404s with the *exact same* response as a slug that never existed
+- [ ] Reorder projects with a list missing one of the current items → 400, doesn't silently drop it
+- [ ] Send some rough, informal text to `/improve-content` → confirm the response is polish/rephrasing only, doesn't invent new claims not present in your original text

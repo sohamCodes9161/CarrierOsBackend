@@ -16,6 +16,7 @@ import githubRoutes from './routes/github.routes.js';
 import interviewRoutes from './routes/interview.routes.js';
 import careerProfileRoutes from './routes/careerProfile.routes.js';
 import roadmapRoutes from './routes/roadmap.routes.js';
+import portfolioRoutes from './routes/portfolio.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,6 +64,7 @@ app.use('/api/v1/github', githubRoutes);
 app.use('/api/v1/interviews', interviewRoutes);
 app.use('/api/v1/career-profile', careerProfileRoutes);
 app.use('/api/v1/roadmap', roadmapRoutes);
+app.use('/api/v1/portfolio', portfolioRoutes);
 
 // --- 404 + error handling (must be last) ---
 app.use(notFoundHandler);
