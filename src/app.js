@@ -17,7 +17,12 @@ import interviewRoutes from './routes/interview.routes.js';
 import careerProfileRoutes from './routes/careerProfile.routes.js';
 import roadmapRoutes from './routes/roadmap.routes.js';
 import portfolioRoutes from './routes/portfolio.routes.js';
+import jobApplicationRoutes from './routes/jobApplication.routes.js';
+import jobSearchRoutes from './routes/jobSearch.routes.js';
+import quizRoutes from './routes/quiz.routes.js';
 
+
+import dashboardRoutes from './routes/dashboard.routes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -46,7 +51,7 @@ if (env.NODE_ENV !== 'test') {
 // Generic rate limiter for all API routes; auth routes get a stricter one later
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 300,
+  max: 5000,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -65,6 +70,10 @@ app.use('/api/v1/interviews', interviewRoutes);
 app.use('/api/v1/career-profile', careerProfileRoutes);
 app.use('/api/v1/roadmap', roadmapRoutes);
 app.use('/api/v1/portfolio', portfolioRoutes);
+app.use('/api/v1/job-applications', jobApplicationRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/job-search', jobSearchRoutes);
+app.use('/api/v1/quizzes', quizRoutes);
 
 // --- 404 + error handling (must be last) ---
 app.use(notFoundHandler);

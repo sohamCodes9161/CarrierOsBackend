@@ -443,3 +443,74 @@ Import `CareerOS-Portfolio.postman_collection.json` and run roughly in the numbe
 - [ ] Publish, confirm the public page works, then unpublish → confirm the public page now 404s with the *exact same* response as a slug that never existed
 - [ ] Reorder projects with a list missing one of the current items → 400, doesn't silently drop it
 - [ ] Send some rough, informal text to `/improve-content` → confirm the response is polish/rephrasing only, doesn't invent new claims not present in your original text
+
+---
+
+## Phase 2 Modules
+
+### Module 9: Live Job Search + Skill-Gap Match Scoring
+
+#### Features & Architecture
+- **Real-Time API Integration:** Dynamically fetches live job listings from external APIs (**Adzuna API** using `ADZUNA_APP_ID` & `ADZUNA_APP_KEY`, with automatic fallback to **Remotive API**).
+- **Skill Extraction:** Parses raw job titles and descriptions to extract required technical skills against a known dictionary.
+- **Dynamic Skill-Gap Scoring:** Executes `computeSkillGap()` in real-time, comparing the job's required skills against the user's confirmed `CareerProfile` skills to compute a `matchPercentage` and generate an explicit `alreadyHave` vs. `missing` breakdown.
+- **Persistent Fallback & Custom Postings:** Supports saving custom `JobPosting` documents in MongoDB for capstone reviews and offline testing.
+- **Seamless Application Conversion:** Directly converts any searched or custom job posting into an active record in the `JobApplication` tracker via a single `/convert` endpoint call.
+
+#### API Endpoints (Require `Authorization: Bearer <accessToken>`)
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/job-search` | Fetches live scored job listings with personalized skill-gap match breakdowns. |
+| POST | `/api/v1/job-search` | Creates a custom `JobPosting` document in MongoDB. |
+| GET | `/api/v1/job-search/:id` | Retrieves single job posting details along with profile match analysis. |
+| POST | `/api/v1/job-search/:id/convert` | Converts a `JobPosting` into a tracked `JobApplication` record. |
+
+---
+
+### Module 8: Job Application Tracker
+
+#### Features & Architecture
+- **Full Lifecycle Pipeline:** Tracks job application progress across 7 explicit states (`bookmarked`, `applied`, `screening`, `interviewing`, `offered`, `rejected`, `withdrawn`).
+- **Duplicate Prevention:** Enforces unique application records per candidate for the same role and company.
+- **Pipeline Analytics:** Dedicated `/stats` aggregation endpoint returning real-time application pipeline counts across all active stages.
+
+#### API Endpoints (Require `Authorization: Bearer <accessToken>`)
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/v1/job-applications` | Track a new job application. |
+| GET | `/api/v1/job-applications` | Retrieve user's tracked applications (supports filtering by status and search terms). |
+| GET | `/api/v1/job-applications/stats` | Aggregates application pipeline metrics by status. |
+| GET | `/api/v1/job-applications/:id` | Retrieve single application details. |
+| PATCH | `/api/v1/job-applications/:id` | Update status, interview dates, salary, or notes. |
+| DELETE | `/api/v1/job-applications/:id` | Remove application record from tracking. |
+
+---
+
+### Module 10: Adaptive Spaced-Quiz & Mastery Module
+
+#### Features & Architecture
+- **Hybrid Adaptive Difficulty Engine:** Dynamically calculates quiz difficulty (`easy`, `balanced`, `mastery`) based on user attempt streaks and historical accuracy averages on the target topic.
+- **AI Anti-Repetition Constraints:** Queries past `QuizAttempt` history for the user and feeds previously generated question texts as negative constraints into Groq AI (`openai/gpt-oss-120b`) to prevent duplicate questions.
+- **Backend Answer Isolation:** Generated question options are stored safely in MongoDB, while `correctOptionIndex` and `explanation` are hidden from client responses until submission.
+- **Timed Constraints & Speed Multipliers:** Calculates completion speed against allocated time limits (`timeLimitSeconds`), awarding a time bonus multiplier (`1.15x`) when completed accurately well within the target window.
+- **Rich Post-Quiz AI Analytics:** Generates instant performance debriefs, including accuracy percentage, speed analysis, identified growth areas, and detailed explanations for failed questions.
+
+#### API Endpoints (Require `Authorization: Bearer <accessToken>`)
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/v1/quizzes/generate` | Generates a fresh adaptive micro-quiz for a custom topic or linked `Roadmap` node. |
+| POST | `/api/v1/quizzes/submit` | Grades submitted answers, calculates score/speed metrics, and returns AI performance debrief. |
+| GET | `/api/v1/quizzes/history` | Retrieves past quiz attempt history and performance trends. |
+
+---
+
+### Module 11: Master Dashboard Aggregator
+
+#### Features & Architecture
+- **Unified Home Screen Endpoint:** A single read-only endpoint (`GET /api/v1/dashboard`) that consolidates key metrics across all system modules (`ResumeAnalysis`, `GithubAnalysis`, `CareerProfile`, `Interview`, `Roadmap`, `Portfolio`, and `JobApplication`).
+- **Zero-Failure Guarantees:** Returns clean empty-state summaries for uninitialized modules rather than throwing `404` errors or partial failures for brand-new user accounts.
+
+#### API Endpoints (Require `Authorization: Bearer <accessToken>`)
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/dashboard` | Consolidated metrics for home screen analytics. |

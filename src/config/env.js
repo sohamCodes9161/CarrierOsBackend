@@ -28,18 +28,17 @@ export const env = {
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
 
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
-  // llama-3.3-70b-versatile was deprecated by Groq (announced June 17 2026,
-  // shutdown Aug 16 2026) - defaulting to their recommended replacement.
   GROQ_MODEL: process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
-
   GROQ_STT_MODEL: process.env.GROQ_STT_MODEL || 'whisper-large-v3-turbo',
 
-  // Edge Neural TTS (msedge-tts) - free, no billing account required.
-  // Female: en-US-AriaNeural, en-US-AvaNeural. Male: en-US-GuyNeural, en-US-AndrewNeural.
   EDGE_TTS_VOICE: process.env.EDGE_TTS_VOICE || 'en-US-AriaNeural',
 
-  GITHUB_TOKEN: process.env.GITHUB_TOKEN || '', // optional; raises rate limit from 60/hr to 5000/hr
+  GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',
   GITHUB_API_BASE: 'https://api.github.com',
+
+  ADZUNA_APP_ID: process.env.ADZUNA_APP_ID || '',
+  ADZUNA_APP_KEY: process.env.ADZUNA_APP_KEY || '',
+  ADZUNA_COUNTRY: process.env.ADZUNA_COUNTRY || 'us',
 };
 
 export { required };

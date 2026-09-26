@@ -1,8 +1,12 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/User.model.js';
 import { RefreshToken } from '../models/RefreshToken.model.js';
+import { PasswordResetToken } from '../models/PasswordResetToken.model.js';
+import { sendPasswordResetEmail } from '../integrations/email.integration.js';
+import { env } from '../config/env.js';
 import { signAccessToken, generateRefreshToken, hashRefreshToken } from '../utils/token.js';
-import { ConflictError, UnauthorizedError } from '../errors/AppError.js';
+import { ConflictError, UnauthorizedError, BadRequestError } from '../errors/AppError.js';
 
 const SALT_ROUNDS = 10;
 
@@ -74,4 +78,70 @@ export async function getUserById(userId) {
     throw new UnauthorizedError('User no longer exists');
   }
   return user;
+}
+
+/**
+ * Initiates a password reset process by generating a token and sending a reset email.
+ * Quietly returns if the email is not registered (for security).
+ */
+export async function requestPasswordReset(email) {
+  const user = await User.findOne({ email });
+  if (!user) return; // Silent success to prevent account enumeration
+
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
+
+  await PasswordResetToken.create({
+    user: user._id,
+    tokenHash,
+    expiresAt,
+  });
+
+  const resetUrl = `${env.RESET_PASSWORD_URL}?token=${rawToken}`;
+  await sendPasswordResetEmail(user.email, resetUrl);
+}
+
+/**
+ * Resets the password using a valid, non-expired reset token.
+ */
+export async function resetPassword({ token, newPassword }) {
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const storedToken = await PasswordResetToken.findOne({ tokenHash });
+
+  if (!storedToken || storedToken.expiresAt < new Date()) {
+    throw new BadRequestError('Reset token is invalid or has expired');
+  }
+
+  const newPasswordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+  // 1. Update user's password
+  await User.updateOne({ _id: storedToken.user }, { $set: { passwordHash: newPasswordHash } });
+
+  // 2. Invalidate reset token (single-use)
+  await PasswordResetToken.deleteOne({ _id: storedToken._id });
+
+  // 3. Invalidate all active refresh sessions for security
+  await RefreshToken.deleteMany({ user: storedToken.user });
+}
+
+/**
+ * Changes password for an authenticated user after verifying current password.
+ */
+export async function changePassword({ userId, currentPassword, newPassword }) {
+  const user = await User.findById(userId).select('+passwordHash');
+  if (!user) {
+    throw new UnauthorizedError('User no longer exists');
+  }
+
+  const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!isMatch) {
+    throw new UnauthorizedError('Current password is incorrect');
+  }
+
+  const newPasswordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+  // Update password and invalidate all active sessions
+  await User.updateOne({ _id: userId }, { $set: { passwordHash: newPasswordHash } });
+  await RefreshToken.deleteMany({ user: userId });
 }

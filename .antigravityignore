@@ -1,0 +1,19 @@
+# Dependencies (Crucial: never let AI scan node_modules)
+node_modules/
+
+# Environment variables & secrets (Crucial: keep your .env secure)
+.env
+.env.local
+.env.*.local
+
+# Logs and debug output
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Build outputs or coverage reports (if any)
+dist/
+build/
+coverage/

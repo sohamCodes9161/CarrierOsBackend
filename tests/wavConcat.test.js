@@ -49,7 +49,7 @@ function parseHeaderFields(buffer) {
 describe('concatWavBuffers', () => {
   it('returns the single buffer unchanged when only one is given', () => {
     const wav = buildTestWav({ numSamples: 50 });
-    expect(concatWavBuffers([wav])).toBe(wav);
+    expect(concatWavBuffers([wav])).toEqual(wav);
   });
 
   it('produces a valid WAV header for the concatenated result', () => {

@@ -1,27 +1,35 @@
-function normalizeKey(str) {
+/**
+ * Normalizes a skill string or skill object safely.
+ * Handles strings ("C++"), objects ({ name: "C++" }), and nulls/undefined.
+ */
+function normalizeKey(val) {
+  if (!val) return '';
+  const str = typeof val === 'string' ? val : val.name || val.skill || String(val);
   return str.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 /**
  * Compares an explicit list of target skills against the candidate's known
  * skills (from their Career Profile), returning which ones they already
- * have and which are genuinely missing. Purely for transparency in the
- * response - the actual roadmap node generation doesn't depend on this list
- * being provided (see filterNodesAgainstKnownSkills below, which is the
- * safety net that applies regardless).
+ * have and which are genuinely missing.
  */
-export function computeSkillGap({ targetSkills, profileSkills }) {
-  const profileKeys = new Set((profileSkills || []).map((s) => normalizeKey(s.name)));
+export function computeSkillGap({ targetSkills = [], profileSkills = [] }) {
+  // Support both plain string arrays ["React", "C++"] and object arrays [{ name: "React" }]
+  const profileKeys = new Set(
+    (profileSkills || []).map((s) => normalizeKey(s)).filter(Boolean)
+  );
+
   const alreadyHave = [];
   const missing = [];
 
   for (const raw of targetSkills || []) {
     const key = normalizeKey(raw);
     if (!key) continue;
+
     if (profileKeys.has(key)) {
-      alreadyHave.push(raw.trim());
+      alreadyHave.push(typeof raw === 'string' ? raw.trim() : raw);
     } else {
-      missing.push(raw.trim());
+      missing.push(typeof raw === 'string' ? raw.trim() : raw);
     }
   }
 
@@ -31,12 +39,15 @@ export function computeSkillGap({ targetSkills, profileSkills }) {
 /**
  * Deterministically drops any AI-proposed roadmap node whose title matches
  * (case/whitespace-insensitively) a skill already confirmed in the
- * candidate's Career Profile. This is the actual enforcement mechanism for
- * "don't propose topics they already know" - applied regardless of whether
- * the caller supplied an explicit targetSkills list, since we can't fully
- * trust the AI to have followed that instruction on its own.
+ * candidate's Career Profile.
  */
-export function filterNodesAgainstKnownSkills(nodes, profileSkills) {
-  const profileKeys = new Set((profileSkills || []).map((s) => normalizeKey(s.name)));
-  return nodes.filter((node) => !profileKeys.has(normalizeKey(node.title)));
+export function filterNodesAgainstKnownSkills(nodes = [], profileSkills = []) {
+  const profileKeys = new Set(
+    (profileSkills || []).map((s) => normalizeKey(s)).filter(Boolean)
+  );
+
+  return (nodes || []).filter((node) => {
+    const nodeTitleKey = normalizeKey(node?.title || node?.label || node?.skill);
+    return !profileKeys.has(nodeTitleKey);
+  });
 }
