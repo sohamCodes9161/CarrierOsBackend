@@ -35,10 +35,29 @@ app.use('/test', express.static(path.join(__dirname, '../public')));
 
 // --- Security & core middleware ---
 app.use(helmet());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://carrierosbackend.onrender.com',
+  'https://carrier-os-frontend.vercel.app',
+  'https://carrier-os-frontend-9enwunjfj-sohamcodes9161s-projects.vercel.app'
+  // Or keep your env variable as a fallback:
+  ...(env.CLIENT_URL ? [env.CLIENT_URL] : [])
+];
+
 app.use(
   cors({
-    origin: env.CLIENT_URL,
-    credentials: true, // required so the refresh-token cookie can be sent/received
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, Postman, or curl)
+      if (!origin) return callback(null, true);
+
+      // Check if the origin is in our list OR ends with .vercel.app
+      if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true, // required so cookies can be sent/received
   })
 );
 app.use(express.json({ limit: '10kb' })); // small limit; file uploads (resumes) will use a dedicated route/limit later
