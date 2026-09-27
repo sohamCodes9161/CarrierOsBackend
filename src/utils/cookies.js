@@ -2,13 +2,13 @@ import { env } from '../config/env.js';
 
 const REFRESH_COOKIE_NAME = 'refreshToken';
 
-export function trsetRefreshTokenCookie(res, rawToken, expiresAt) {
+export function setRefreshTokenCookie(res, rawToken, expiresAt) {
   res.cookie(REFRESH_COOKIE_NAME, rawToken, {
     httpOnly: true,
-    secure:true, // requires HTTPS in prod (Render gives you this)
-    sameSite: 'none', // 'none' needed cross-site (Vercel <-> Render)
+    secure: true,      // Required for HTTPS cross-site in production
+    sameSite: 'none',  // Required because Vercel and Render are different domains
     expires: expiresAt,
-    path: '/api/v1/auth', // only sent to auth routes, not every request
+    // Removed explicit path restriction so it is sent reliably on all proxy routes
   });
 }
 
@@ -17,7 +17,6 @@ export function clearRefreshTokenCookie(res) {
     httpOnly: true,
     secure: true,
     sameSite: 'none',
-    path: '/api/v1/auth',
   });
 }
 
