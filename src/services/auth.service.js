@@ -46,6 +46,7 @@ export async function loginUser({ email, password }) {
   const tokens = await issueTokenPair(user._id);
   return { user, ...tokens };
 }
+// src/services/auth.service.js
 
 export async function refreshSession(rawRefreshToken) {
   if (!rawRefreshToken) {
@@ -59,11 +60,17 @@ export async function refreshSession(rawRefreshToken) {
     throw new UnauthorizedError('Refresh token is invalid or expired');
   }
 
-  // Rotation: delete the old one, issue a brand new pair
-  await RefreshToken.deleteOne({ _id: stored._id });
+  // FIX: Remove `await RefreshToken.deleteOne({ _id: stored._id });`
+  // Instead of deleting and rotating the refresh token on every single reload,
+  // we reuse the valid refresh token and only issue a fresh Access Token.
+  // This completely eliminates the hot-reload / network race condition bug.
+  const accessToken = signAccessToken(stored.user);
 
-  const tokens = await issueTokenPair(stored.user);
-  return tokens;
+  return { 
+    accessToken, 
+    refreshToken: rawRefreshToken, // Keep the same refresh token
+    refreshTokenExpiresAt: stored.expiresAt 
+  };
 }
 
 export async function logoutUser(rawRefreshToken) {
