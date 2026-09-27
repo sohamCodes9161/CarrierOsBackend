@@ -2,7 +2,7 @@ import { env } from '../config/env.js';
 
 const REFRESH_COOKIE_NAME = 'refreshToken';
 
-export function setRefreshTokenCookie(res, rawToken, expiresAt) {
+export function trsetRefreshTokenCookie(res, rawToken, expiresAt) {
   res.cookie(REFRESH_COOKIE_NAME, rawToken, {
     httpOnly: true,
     secure:true, // requires HTTPS in prod (Render gives you this)
