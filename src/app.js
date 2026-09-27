@@ -36,7 +36,7 @@ app.use('/test', express.static(path.join(__dirname, '../public')));
 // --- Security & core middleware ---
 app.use(helmet());
 
-
+app.set('trust proxy', 1);
 const allowedOrigins = [
   'http://localhost:5173',
   'https://carrierosbackend.onrender.com',
