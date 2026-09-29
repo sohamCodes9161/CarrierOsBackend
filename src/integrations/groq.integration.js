@@ -35,7 +35,7 @@ function mapDefiniteGroqError(err) {
   return null;
 }
 
-async function callGroq({ prompt, schema, schemaName, useStrictSchema }) {
+async function callGroq({ prompt, schema, schemaName, useStrictSchema, temperature = 0.4 }) {
   const groq = getClient();
 
   const response_format = useStrictSchema
@@ -44,7 +44,7 @@ async function callGroq({ prompt, schema, schemaName, useStrictSchema }) {
 
   // In JSON-object fallback mode there's no schema enforcement from Groq itself,
   // so we embed the schema directly in a system instruction and validate the
-  // required fields ourselves afterward (see findMissingRequiredFields below).
+  // required fields ourselves afterward.
   const messages = useStrictSchema
     ? [{ role: 'user', content: prompt }]
     : [
@@ -59,7 +59,7 @@ async function callGroq({ prompt, schema, schemaName, useStrictSchema }) {
     model: env.GROQ_MODEL,
     messages,
     response_format,
-    temperature: 0.4,
+    temperature, // Injected dynamic temperature
   });
 }
 
@@ -79,18 +79,18 @@ function findMissingRequiredFields(obj, schema) {
  * embedded in the prompt, then validates required fields ourselves - so we
  * never silently accept malformed data even on models with weaker guarantees.
  */
-export async function generateStructuredContent({ prompt, responseSchema, schemaName = 'response' }) {
+export async function generateStructuredContent({ prompt, responseSchema, schemaName = 'response', temperature = 0.4 }) {
   let response;
 
   try {
-    response = await callGroq({ prompt, schema: responseSchema, schemaName, useStrictSchema: true });
+    response = await callGroq({ prompt, schema: responseSchema, schemaName, useStrictSchema: true, temperature });
   } catch (err) {
     const definiteError = mapDefiniteGroqError(err);
     if (definiteError) throw definiteError;
 
     // Likely an unsupported response_format for this model - retry with JSON object mode
     try {
-      response = await callGroq({ prompt, schema: responseSchema, schemaName, useStrictSchema: false });
+      response = await callGroq({ prompt, schema: responseSchema, schemaName, useStrictSchema: false, temperature });
     } catch (fallbackErr) {
       throw mapDefiniteGroqError(fallbackErr) || new AppError('AI service request failed', 502);
     }

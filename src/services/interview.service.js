@@ -27,26 +27,14 @@ async function synthesizeAndStore(text, folder) {
   const result = await uploadBufferToCloudinary(audioBuffer, {
     folder,
     filename: `${Date.now()}.mp3`,
-    resourceType: 'video', // Cloudinary requires 'video' resource type for audio files
+    resourceType: 'video',
   });
   return { url: result.secure_url, publicId: result.public_id };
 }
 
 /**
  * Synthesizes speech and atomically patches the result onto an already-saved
- * interview document via `updateOne`, rather than fetch-modify-save. This is
- * deliberately NOT awaited by the callers below - it runs after the main
- * response has already been sent, so the candidate isn't stuck waiting on
- * TTS (which, being an unofficial WebSocket-based service, has the most
- * variable latency of anything in this pipeline - observed as high as
- * 100+ seconds in real testing). Using `updateOne` instead of loading-then-
- * saving the full document also avoids a version conflict with whatever
- * request comes in next for the same interview - it only touches the
- * specific field(s) it's responsible for.
- *
- * Errors are caught and logged, never thrown - a failed background audio
- * patch should never surface as a request failure, since the request it
- * was triggered by has already succeeded and returned.
+ * interview document via `updateOne`, rather than fetch-modify-save.
  */
 function synthesizeAndPatchAsync({ text, folder, filter, buildSetFields }) {
   return synthesizeAndStore(text, folder)
@@ -57,19 +45,28 @@ function synthesizeAndPatchAsync({ text, folder, filter, buildSetFields }) {
 }
 
 async function generateQuestion({ role, difficulty, interviewType, targetSkills, questionNumber, totalQuestions, history }) {
+  // Track which topics have already been covered to force true pivots
+  const coveredAreas = history.map(h => (h.focusArea || '').toLowerCase());
+  const remainingSkills = targetSkills.filter(
+    skill => !coveredAreas.some(covered => covered.includes(skill.toLowerCase()))
+  );
+
   const prompt = buildInterviewQuestionPrompt({
     role,
     difficulty,
     interviewType,
     targetSkills,
+    remainingSkills,
     questionNumber,
     totalQuestions,
     history,
   });
+
   return generateStructuredContent({
     prompt,
     responseSchema: interviewQuestionSchema,
     schemaName: interviewQuestionSchemaName,
+    temperature: 0.7, // Boosted temperature for dynamic generation
   });
 }
 
@@ -113,10 +110,8 @@ export async function startInterview({ userId, role, difficulty, interviewType, 
 
   if (voiceEnabled) {
     const greetingText = buildGreetingText({ role, difficulty, interviewType, targetSkills });
-    const firstQuestionId = interview.questions[0]._id; // Mongoose assigns subdocument _ids at construction time, safe to read now
+    const firstQuestionId = interview.questions[0]._id;
 
-    // Fired but NOT awaited - the caller responds with the interview
-    // immediately; these patch in audioUrl fields once synthesis finishes.
     audioTask = Promise.all([
       synthesizeAndPatchAsync({
         text: greetingText,
@@ -156,7 +151,7 @@ export async function submitAnswer({ interviewId, userId, answerText }) {
     throw new BadRequestError('No pending question to answer');
   }
 
-  // 1. Evaluate the answer just given
+  // 1. Evaluate the answer just given (Uses default strict temperature 0.4)
   const evalPrompt = buildInterviewEvaluationPrompt({
     role: interview.role,
     question: currentQuestion.questionText,
@@ -178,7 +173,7 @@ export async function submitAnswer({ interviewId, userId, answerText }) {
   let nextQuestion = null;
 
   if (isLastQuestion) {
-    // 2a. Interview complete - generate final report
+    // 2a. Interview complete - generate final report (Uses default strict temperature 0.4)
     const reportPrompt = buildInterviewReportPrompt({
       role: interview.role,
       difficulty: interview.difficulty,
@@ -195,7 +190,7 @@ export async function submitAnswer({ interviewId, userId, answerText }) {
     interview.finalReport = { ...finalReport, audioUrl: null, audioPublicId: null };
     interview.completedAt = new Date();
   } else {
-    // 2b. Generate the next adaptive question
+    // 2b. Generate the next adaptive question (Uses boosted temperature 0.7 inside function)
     nextQuestion = await generateQuestion({
       role: interview.role,
       difficulty: interview.difficulty,
@@ -218,10 +213,6 @@ export async function submitAnswer({ interviewId, userId, answerText }) {
     });
   }
 
-  // Save all text-based state now - the response is built from this, and the
-  // saved subdocument ids are what the background audio patch below targets.
-  // Saving here (rather than after audio) is what lets us respond
-  // immediately without waiting on the slowest, most variable step.
   await interview.save();
 
   let audioTask = null;
@@ -252,13 +243,6 @@ export async function submitAnswer({ interviewId, userId, answerText }) {
   return { interview, audioTask };
 }
 
-/**
- * Transcribes a recorded audio answer, then delegates to submitAnswer -
- * the exact same tested evaluation/adaptive-question/completion logic runs
- * either way. Returns both the interview state and the raw transcript, so
- * the caller can show the candidate what was actually heard (important for
- * debugging transcription accuracy).
- */
 export async function submitAudioAnswer({ interviewId, userId, audioBuffer, filename, mimetype }) {
   const transcript = await transcribeAudio(audioBuffer, filename, mimetype);
   const { interview, audioTask } = await submitAnswer({ interviewId, userId, answerText: transcript });
