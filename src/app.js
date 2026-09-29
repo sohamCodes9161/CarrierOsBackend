@@ -66,7 +66,7 @@ if (env.NODE_ENV !== 'test') {
 // Generic rate limiter for all API routes; auth routes get a stricter one later
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5000,
+  max: 15000,
   standardHeaders: true,
   legacyHeaders: false,
 });
