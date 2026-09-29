@@ -3,8 +3,10 @@ import mongoose from 'mongoose';
 const resourceSchema = new mongoose.Schema(
   {
     title: String,
-    type: { type: String, enum: ['article', 'video', 'course', 'official-docs', 'book'] },
+    type: { type: String, enum: ['article', 'video', 'course', 'official-docs', 'book', 'interactive'] },
     description: String,
+    url: { type: String, default: null },
+    isFree: { type: Boolean, default: true },
   },
   { _id: false }
 );
@@ -19,7 +21,7 @@ const projectSchema = new mongoose.Schema(
 
 const nodeSchema = new mongoose.Schema(
   {
-    id: { type: String, required: true }, // slug, stable within this roadmap - used for prerequisiteIds references
+    id: { type: String, required: true },
     title: { type: String, required: true },
     description: String,
     category: String,
@@ -30,7 +32,9 @@ const nodeSchema = new mongoose.Schema(
     priorityScore: Number,
     priorityLabel: { type: String, enum: ['critical', 'high', 'medium', 'low'] },
     estimatedDurationDays: Number,
+    checklist: [String],
     resources: [resourceSchema],
+    practice: [resourceSchema],
     suggestedProjects: [projectSchema],
     status: { type: String, enum: ['not_started', 'in_progress', 'completed', 'skipped'], default: 'not_started' },
   },
@@ -51,7 +55,7 @@ const roadmapSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     targetRole: { type: String, required: true },
-    targetRoleKey: { type: String, required: true }, // normalized (lowercase/trimmed) for the uniqueness match
+    targetRoleKey: { type: String, required: true },
     targetSkillsRequested: [String],
     skillGap: {
       type: new mongoose.Schema(
@@ -73,7 +77,6 @@ const roadmapSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// One roadmap per (user, target role) - regenerating for the same role updates in place.
 roadmapSchema.index({ user: 1, targetRoleKey: 1 }, { unique: true });
 
 export const Roadmap = mongoose.model('Roadmap', roadmapSchema);

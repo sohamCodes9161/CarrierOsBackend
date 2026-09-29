@@ -34,11 +34,9 @@ export async function generateRoadmap({ userId, targetRole, targetSkills }) {
     prompt,
     responseSchema: roadmapNodesSchema,
     schemaName: roadmapNodesSchemaName,
+    temperature: 0.5, // Added temperature for better resource sourcing and checklist variety
   });
 
-  // Deterministic safety net: never propose a node for something the
-  // candidate already has confirmed, regardless of how well the AI followed
-  // the prompt's instruction not to.
   const filteredNodes = filterNodesAgainstKnownSkills(aiResult.nodes, profile.skills);
 
   const { nodes, milestones, totalEstimatedDurationDays } = buildRoadmapGraph(filteredNodes);
@@ -95,9 +93,6 @@ export async function updateNodeStatus({ roadmapId, userId, nodeId, status }) {
     throw new NotFoundError(`No node with id "${nodeId}" exists on this roadmap`);
   }
 
-  // Atomic update targeting the specific array element, avoiding a
-  // fetch-modify-save race the same way the interview/career-profile
-  // modules do for their own background/concurrent update paths.
   const updated = await Roadmap.findOneAndUpdate(
     { _id: roadmapId, 'nodes.id': nodeId },
     { $set: { 'nodes.$.status': status } },

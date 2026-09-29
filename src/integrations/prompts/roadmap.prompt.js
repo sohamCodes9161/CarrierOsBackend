@@ -14,26 +14,20 @@ export const roadmapNodesSchema = {
         type: 'object',
         additionalProperties: false,
         properties: {
-          id: {
-            type: 'string',
-            description: 'short kebab-case slug, unique within this list, e.g. "node-fundamentals" or "sql-joins"',
-          },
+          id: { type: 'string' },
           title: { type: 'string' },
-          description: { type: 'string', description: '1-3 sentences on what this topic covers and why it matters' },
-          category: {
-            type: 'string',
-            description: 'short grouping label, e.g. "Fundamentals", "Databases", "System Design", "DevOps"',
-          },
+          description: { type: 'string' },
+          category: { type: 'string' },
           complexityTier: { type: 'string', enum: ['beginner', 'intermediate', 'advanced'] },
-          importance: {
-            type: 'string',
-            enum: ['core', 'important', 'nice-to-have'],
-            description: 'how essential this is specifically for the stated target role',
-          },
+          importance: { type: 'string', enum: ['core', 'important', 'nice-to-have'] },
           prerequisiteIds: {
             type: 'array',
             items: { type: 'string' },
-            description: 'ids of OTHER nodes in this same list that should be learned first; empty array if this has no prerequisites within the list',
+          },
+          checklist: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'A list of 3-6 specific sub-topics, concepts, or tasks the candidate must master to complete this node.',
           },
           resources: {
             type: 'array',
@@ -42,12 +36,28 @@ export const roadmapNodesSchema = {
               additionalProperties: false,
               properties: {
                 title: { type: 'string' },
-                type: { type: 'string', enum: ['article', 'video', 'course', 'official-docs', 'book'] },
+                type: { type: 'string', enum: ['article', 'video', 'course', 'official-docs', 'book', 'interactive'] },
                 description: { type: 'string' },
+                url: { type: 'string', description: 'A valid, real URL to the resource.' },
+                isFree: { type: 'boolean' },
               },
-              required: ['title', 'type', 'description'],
+              required: ['title', 'type', 'description', 'url', 'isFree'],
             },
-            description: 'Do NOT include URLs - suggest resource titles/topics only, never a specific link, since generated links are frequently wrong or dead.',
+          },
+          practice: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                title: { type: 'string' },
+                type: { type: 'string', enum: ['article', 'video', 'course', 'official-docs', 'book', 'interactive'] },
+                description: { type: 'string' },
+                url: { type: 'string', description: 'A valid URL to an interactive tutorial, playground, or repository.' },
+                isFree: { type: 'boolean' },
+              },
+              required: ['title', 'type', 'description', 'url', 'isFree'],
+            },
           },
           suggestedProjects: {
             type: 'array',
@@ -70,7 +80,9 @@ export const roadmapNodesSchema = {
           'complexityTier',
           'importance',
           'prerequisiteIds',
+          'checklist',
           'resources',
+          'practice',
           'suggestedProjects',
         ],
       },
@@ -101,13 +113,11 @@ CANDIDATE'S KNOWN GROWTH AREAS: ${profileGrowthAreas.length > 0 ? profileGrowthA
 ${explicitTargetsText}
 
 Propose a set of roadmap topics (nodes) that would take this candidate from their current state toward being genuinely ready for a "${targetRole}" role. For each node:
-- Give it a genuine prerequisite structure using prerequisiteIds referencing other node ids in this same list - foundational topics should have no prerequisites, and topics that build on others should reference them. Do not create circular dependencies.
-- Assign complexityTier honestly based on how advanced the topic actually is, not based on where it falls in the learning order.
-- Assign importance based specifically on how essential this is for THIS role - not every topic is "core".
-- Suggest resources by title/type/description only - never include a URL, since AI-generated links are frequently wrong or dead and this would mislead the candidate.
-- Suggest 1-2 practical project ideas per node where relevant, that would demonstrably prove the skill.
+- Break the topic down into a actionable "checklist" of 3-6 sub-concepts.
+- Suggest 2-3 high-quality "resources". You MUST provide REAL, VALID URLs. To prevent dead links, rely exclusively on canonical sources: official documentation (e.g., MDN, React Docs, AWS Docs), Wikipedia, freeCodeCamp, GeeksforGeeks, or widely recognized YouTube channels (e.g., Traversy Media, Fireship).
+- Provide 1-2 "practice" links. These should point to interactive playgrounds, LeetCode, GitHub templates, or guided tutorials.
+- Mark resources accurately with "isFree" (true/false).
+- Suggest 1-2 practical project ideas per node where relevant.
 
-Aim for a reasonably complete but not overwhelming roadmap - typically 8-20 nodes depending on how large the actual skill gap is. If the candidate's current skills already cover most of what this role needs, say so honestly in overallSummary and propose fewer, more targeted nodes rather than padding the list.
-
-Respond strictly following the response schema.`;
+Aim for a reasonably complete but not overwhelming roadmap (8-20 nodes). Respond strictly following the response schema.`;
 }
