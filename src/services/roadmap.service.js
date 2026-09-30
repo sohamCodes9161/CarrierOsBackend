@@ -1,3 +1,5 @@
+// backend/src/services/roadmap.service.js
+
 import { Roadmap } from '../models/Roadmap.model.js';
 import { CareerProfile } from '../models/CareerProfile.model.js';
 import { generateStructuredContent } from '../integrations/groq.integration.js';
@@ -13,17 +15,15 @@ import { BadRequestError, NotFoundError, ForbiddenError } from '../errors/AppErr
 function normalizeRoleKey(role) {
   return role.trim().toLowerCase().replace(/\s+/g, ' ');
 }
-// backend/src/services/roadmap.service.js
 
-function sanitizeResourceUrl(resource, fallbackQuery) {
+// Fallback logic to build a working Google Search URL if the LLM leaves url blank/broken
+function sanitizeResourceUrl(resource, nodeTitle) {
   const url = resource?.url?.trim();
-  // Check if URL exists and is a valid HTTPS string
   if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
     return url;
   }
-  // Fallback to a functional search query URL if model leaves URL blank or broken
-  const query = encodeURIComponent(`${resource.title || fallbackQuery} tutorial`);
-  return `https://www.google.com/search?q=${query}`;
+  const searchQuery = encodeURIComponent(`${resource?.title || nodeTitle} tutorial`);
+  return `https://www.google.com/search?q=${searchQuery}`;
 }
 
 export async function generateRoadmap({ userId, targetRole, targetSkills }) {
@@ -46,12 +46,12 @@ export async function generateRoadmap({ userId, targetRole, targetSkills }) {
     prompt,
     responseSchema: roadmapNodesSchema,
     schemaName: roadmapNodesSchemaName,
-    temperature: 0.3, // Lower temperature slightly for higher structural fidelity
+    temperature: 0.3,
   });
 
   const filteredNodes = filterNodesAgainstKnownSkills(aiResult.nodes, profile.skills);
 
-  // Fallback sanitizer to ensure every resource & practice item has a functional URL
+  // Guarantee every resource item has a non-null, functional URL
   const sanitizedNodes = filteredNodes.map((node) => ({
     ...node,
     resources: (node.resources || []).map((res) => ({
@@ -87,4 +87,44 @@ export async function generateRoadmap({ userId, targetRole, targetSkills }) {
   );
 
   return roadmap;
+}
+
+export async function listRoadmaps(userId) {
+  return Roadmap.find({ user: userId })
+    .sort({ updatedAt: -1 })
+    .select('targetRole totalEstimatedDurationDays generatedAt createdAt updatedAt');
+}
+
+export async function getRoadmapById({ roadmapId, userId }) {
+  const roadmap = await Roadmap.findById(roadmapId);
+  if (!roadmap) {
+    throw new NotFoundError('Roadmap not found');
+  }
+  if (roadmap.user.toString() !== userId) {
+    throw new ForbiddenError('You do not have access to this roadmap');
+  }
+  return roadmap;
+}
+
+export async function updateNodeStatus({ roadmapId, userId, nodeId, status }) {
+  const roadmap = await Roadmap.findById(roadmapId);
+  if (!roadmap) {
+    throw new NotFoundError('Roadmap not found');
+  }
+  if (roadmap.user.toString() !== userId) {
+    throw new ForbiddenError('You do not have access to this roadmap');
+  }
+
+  const node = roadmap.nodes.find((n) => n.id === nodeId);
+  if (!node) {
+    throw new NotFoundError(`No node with id "${nodeId}" exists on this roadmap`);
+  }
+
+  const updated = await Roadmap.findOneAndUpdate(
+    { _id: roadmapId, 'nodes.id': nodeId },
+    { $set: { 'nodes.$.status': status } },
+    { new: true }
+  );
+
+  return updated;
 }

@@ -91,8 +91,6 @@ export const roadmapNodesSchema = {
   required: ['overallSummary', 'nodes'],
 };
 
-// backend/src/integrations/prompts/roadmap.prompt.js
-
 export function buildRoadmapPrompt({ targetRole, targetSkills, profileSkills, profileStrengths, profileGrowthAreas }) {
   const knownSkillsText =
     profileSkills.length > 0
@@ -117,8 +115,8 @@ ${explicitTargetsText}
 Propose a set of roadmap topics (nodes) that would take this candidate from their current state toward being genuinely ready for a "${targetRole}" role. For each node:
 - Break the topic down into an actionable "checklist" of 3-6 sub-concepts.
 - Suggest 2-3 high-quality "resources" and 1-2 "practice" links.
-- CRITICAL FORMATTING REQUIREMENT: Every item inside "resources" and "practice" MUST strictly include all 5 fields: "title", "type", "description", "url", and "isFree".
-- URL RULES: To prevent broken links, ONLY use standard, permanent root or hub URLs (e.g., "https://dev.mysql.com/doc/", "https://developer.mozilla.org", "https://www.freecodecamp.org", "https://react.dev"). Do NOT hallucinate deep sub-paths or non-existent article routes.
+- MANDATORY FIELD REQUIREMENT: Every item in "resources" and "practice" MUST include "url" and "isFree". Do NOT skip the "url" property under any circumstances.
+- URL ACCURACY RULE: To prevent broken links, use permanent hub or home documentation URLs (e.g., "https://dev.mysql.com/doc/", "https://developer.mozilla.org", "https://www.freecodecamp.org") or clear search query URLs if specific page paths are unknown. Do NOT invent deep non-existent paths.
 - Mark resources accurately with "isFree" (true/false).
 - Suggest 1-2 practical project ideas per node where relevant.
 
