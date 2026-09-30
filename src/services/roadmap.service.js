@@ -13,6 +13,18 @@ import { BadRequestError, NotFoundError, ForbiddenError } from '../errors/AppErr
 function normalizeRoleKey(role) {
   return role.trim().toLowerCase().replace(/\s+/g, ' ');
 }
+// backend/src/services/roadmap.service.js
+
+function sanitizeResourceUrl(resource, fallbackQuery) {
+  const url = resource?.url?.trim();
+  // Check if URL exists and is a valid HTTPS string
+  if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+    return url;
+  }
+  // Fallback to a functional search query URL if model leaves URL blank or broken
+  const query = encodeURIComponent(`${resource.title || fallbackQuery} tutorial`);
+  return `https://www.google.com/search?q=${query}`;
+}
 
 export async function generateRoadmap({ userId, targetRole, targetSkills }) {
   const profile = await CareerProfile.findOne({ user: userId });
@@ -34,12 +46,27 @@ export async function generateRoadmap({ userId, targetRole, targetSkills }) {
     prompt,
     responseSchema: roadmapNodesSchema,
     schemaName: roadmapNodesSchemaName,
-    temperature: 0.5, // Added temperature for better resource sourcing and checklist variety
+    temperature: 0.3, // Lower temperature slightly for higher structural fidelity
   });
 
   const filteredNodes = filterNodesAgainstKnownSkills(aiResult.nodes, profile.skills);
 
-  const { nodes, milestones, totalEstimatedDurationDays } = buildRoadmapGraph(filteredNodes);
+  // Fallback sanitizer to ensure every resource & practice item has a functional URL
+  const sanitizedNodes = filteredNodes.map((node) => ({
+    ...node,
+    resources: (node.resources || []).map((res) => ({
+      ...res,
+      url: sanitizeResourceUrl(res, node.title),
+      isFree: typeof res.isFree === 'boolean' ? res.isFree : true,
+    })),
+    practice: (node.practice || []).map((prac) => ({
+      ...prac,
+      url: sanitizeResourceUrl(prac, node.title),
+      isFree: typeof prac.isFree === 'boolean' ? prac.isFree : true,
+    })),
+  }));
+
+  const { nodes, milestones, totalEstimatedDurationDays } = buildRoadmapGraph(sanitizedNodes);
 
   const roadmap = await Roadmap.findOneAndUpdate(
     { user: userId, targetRoleKey: normalizeRoleKey(targetRole) },
@@ -60,44 +87,4 @@ export async function generateRoadmap({ userId, targetRole, targetSkills }) {
   );
 
   return roadmap;
-}
-
-export async function listRoadmaps(userId) {
-  return Roadmap.find({ user: userId })
-    .sort({ updatedAt: -1 })
-    .select('targetRole totalEstimatedDurationDays generatedAt createdAt updatedAt');
-}
-
-export async function getRoadmapById({ roadmapId, userId }) {
-  const roadmap = await Roadmap.findById(roadmapId);
-  if (!roadmap) {
-    throw new NotFoundError('Roadmap not found');
-  }
-  if (roadmap.user.toString() !== userId) {
-    throw new ForbiddenError('You do not have access to this roadmap');
-  }
-  return roadmap;
-}
-
-export async function updateNodeStatus({ roadmapId, userId, nodeId, status }) {
-  const roadmap = await Roadmap.findById(roadmapId);
-  if (!roadmap) {
-    throw new NotFoundError('Roadmap not found');
-  }
-  if (roadmap.user.toString() !== userId) {
-    throw new ForbiddenError('You do not have access to this roadmap');
-  }
-
-  const node = roadmap.nodes.find((n) => n.id === nodeId);
-  if (!node) {
-    throw new NotFoundError(`No node with id "${nodeId}" exists on this roadmap`);
-  }
-
-  const updated = await Roadmap.findOneAndUpdate(
-    { _id: roadmapId, 'nodes.id': nodeId },
-    { $set: { 'nodes.$.status': status } },
-    { new: true }
-  );
-
-  return updated;
 }
