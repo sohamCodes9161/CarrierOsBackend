@@ -18,14 +18,21 @@ function normalizeRoleKey(role) {
 
 // Fallback logic to build a working Google Search URL if the LLM leaves url blank/broken
 function sanitizeResourceUrl(resource, nodeTitle) {
-  const url = resource?.url?.trim();
-  if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-    return url;
-  }
-  const searchQuery = encodeURIComponent(`${resource?.title || nodeTitle} tutorial`);
-  return `https://www.google.com/search?q=${searchQuery}`;
-}
+  const title = resource?.title || nodeTitle;
 
+  // 1. If it's a video, point directly to a YouTube search query
+  if (resource?.type === 'video') {
+    return `https://www.youtube.com/results?search_query=${encodeURIComponent(title + ' tutorial')}`;
+  }
+
+  // 2. If it's official docs, construct a Google search targeted for official documentation
+  if (resource?.type === 'official-docs') {
+    return `https://www.google.com/search?q=${encodeURIComponent(title + ' official documentation')}`;
+  }
+
+  // 3. Fallback for all other articles/guides (Guaranteed 200 OK without 404s)
+  return `https://www.google.com/search?q=${encodeURIComponent(title + ' tutorial')}`;
+}
 export async function generateRoadmap({ userId, targetRole, targetSkills }) {
   const profile = await CareerProfile.findOne({ user: userId });
   if (!profile) {
