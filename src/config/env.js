@@ -39,6 +39,10 @@ export const env = {
   ADZUNA_APP_ID: process.env.ADZUNA_APP_ID || '',
   ADZUNA_APP_KEY: process.env.ADZUNA_APP_KEY || '',
   ADZUNA_COUNTRY: process.env.ADZUNA_COUNTRY || 'us',
+
+  YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY || '',
+  GOOGLE_SEARCH_API_KEY: process.env.GOOGLE_SEARCH_API_KEY || '',
+  GOOGLE_SEARCH_CX: process.env.GOOGLE_SEARCH_CX || '',
 };
 
 export { required };

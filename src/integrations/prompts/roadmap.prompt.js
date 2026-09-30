@@ -113,10 +113,9 @@ CANDIDATE'S KNOWN GROWTH AREAS: ${profileGrowthAreas.length > 0 ? profileGrowthA
 ${explicitTargetsText}
 
 Propose a set of roadmap topics (nodes) that would take this candidate from their current state toward being genuinely ready for a "${targetRole}" role. For each node:
-- Break the topic down into an actionable "checklist" of 3-6 sub-concepts.
-- Suggest 2-3 high-quality "resources" and 1-2 "practice" links.
-- MANDATORY FIELD REQUIREMENT: Every item in "resources" and "practice" MUST include "url" and "isFree". Do NOT skip the "url" property under any circumstances.
-- URL ACCURACY RULE: To prevent broken links, use permanent hub or home documentation URLs (e.g., "https://dev.mysql.com/doc/", "https://developer.mozilla.org", "https://www.freecodecamp.org") or clear search query URLs if specific page paths are unknown. Do NOT invent deep non-existent paths.
+- Break the topic down into a actionable "checklist" of 3-6 sub-concepts.
+- Suggest 2-3 high-quality "resources". You MUST provide REAL, VALID URLs. To prevent dead links, rely exclusively on canonical sources: official documentation (e.g., MDN, React Docs, AWS Docs), Wikipedia, freeCodeCamp, GeeksforGeeks, or widely recognized YouTube channels (e.g., Traversy Media, Fireship).
+- Provide 1-2 "practice" links. These should point to interactive playgrounds, LeetCode, GitHub templates, or guided tutorials.
 - Mark resources accurately with "isFree" (true/false).
 - Suggest 1-2 practical project ideas per node where relevant.
 

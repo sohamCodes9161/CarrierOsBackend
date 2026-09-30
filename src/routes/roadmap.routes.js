@@ -22,5 +22,7 @@ router.post('/generate', generateLimiter, validate(generateRoadmapSchema), roadm
 router.get('/', roadmapController.list);
 router.get('/:id', roadmapController.getRoadmap);
 router.patch('/:id/nodes/:nodeId/status', validate(updateNodeStatusSchema), roadmapController.updateNodeStatus);
+// Add this new route for handling resource updates
+router.patch('/:id/nodes/:nodeId/resources', roadmapController.updateNodeResources);
 
 export default router;

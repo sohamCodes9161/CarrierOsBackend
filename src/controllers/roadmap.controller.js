@@ -37,3 +37,15 @@ export const updateNodeStatus = asyncHandler(async (req, res) => {
   });
   sendSuccess(res, { message: 'Node status updated', data: { roadmap } });
 });
+
+// Add this below your existing exports
+export const updateNodeResources = asyncHandler(async (req, res) => {
+  const roadmap = await roadmapService.updateNodeResources({
+    roadmapId: req.params.id,
+    userId: req.userId,
+    nodeId: req.params.nodeId,
+    resources: req.body.resources,
+    practice: req.body.practice,
+  });
+  sendSuccess(res, { message: 'Resources updated successfully', data: { roadmap } });
+});

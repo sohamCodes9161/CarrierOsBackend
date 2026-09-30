@@ -1,46 +1,39 @@
-// backend/src/services/roadmap.service.js
-
 import { Roadmap } from '../models/Roadmap.model.js';
 import { CareerProfile } from '../models/CareerProfile.model.js';
 import { generateStructuredContent } from '../integrations/groq.integration.js';
-import {
-  buildRoadmapPrompt,
-  roadmapNodesSchema,
-  roadmapNodesSchemaName,
-} from '../integrations/prompts/roadmap.prompt.js';
+import { buildRoadmapPrompt, roadmapNodesSchema, roadmapNodesSchemaName } from '../integrations/prompts/roadmap.prompt.js';
 import { computeSkillGap, filterNodesAgainstKnownSkills } from '../utils/skillGapAnalyzer.js';
 import { buildRoadmapGraph } from '../utils/roadmapGraph.js';
 import { BadRequestError, NotFoundError, ForbiddenError } from '../errors/AppError.js';
+import { fetchRealVideoUrl, fetchRealArticleUrl } from '../integrations/search.integration.js';
 
 function normalizeRoleKey(role) {
   return role.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-// Fallback logic to build a working Google Search URL if the LLM leaves url blank/broken
-function sanitizeResourceUrl(resource, nodeTitle) {
-  const title = resource?.title || nodeTitle;
+// Replaces AI hallucinated URLs with real, fetched URLs
+async function enrichResourceWithRealUrl(resource, nodeTitle) {
+  const query = `${resource.title} ${nodeTitle}`;
+  let realUrl = null;
 
-  // 1. If it's a video, point directly to a YouTube search query
-  if (resource?.type === 'video') {
-    return `https://www.youtube.com/results?search_query=${encodeURIComponent(title + ' tutorial')}`;
+  if (resource.type === 'video') {
+    realUrl = await fetchRealVideoUrl(query);
+  } else {
+    realUrl = await fetchRealArticleUrl(query);
   }
 
-  // 2. If it's official docs, construct a Google search targeted for official documentation
-  if (resource?.type === 'official-docs') {
-    return `https://www.google.com/search?q=${encodeURIComponent(title + ' official documentation')}`;
-  }
-
-  // 3. Fallback for all other articles/guides (Guaranteed 200 OK without 404s)
-  return `https://www.google.com/search?q=${encodeURIComponent(title + ' tutorial')}`;
+  return {
+    ...resource,
+    url: realUrl || resource.url, // fallback to AI url if search fails
+    isFree: typeof resource.isFree === 'boolean' ? resource.isFree : true,
+  };
 }
+
 export async function generateRoadmap({ userId, targetRole, targetSkills }) {
   const profile = await CareerProfile.findOne({ user: userId });
-  if (!profile) {
-    throw new BadRequestError('Generate a career profile first before requesting a roadmap.');
-  }
+  if (!profile) throw new BadRequestError('Generate a career profile first before requesting a roadmap.');
 
   const skillGap = computeSkillGap({ targetSkills, profileSkills: profile.skills });
-
   const prompt = buildRoadmapPrompt({
     targetRole,
     targetSkills,
@@ -58,24 +51,16 @@ export async function generateRoadmap({ userId, targetRole, targetSkills }) {
 
   const filteredNodes = filterNodesAgainstKnownSkills(aiResult.nodes, profile.skills);
 
-  // Guarantee every resource item has a non-null, functional URL
-  const sanitizedNodes = filteredNodes.map((node) => ({
-    ...node,
-    resources: (node.resources || []).map((res) => ({
-      ...res,
-      url: sanitizeResourceUrl(res, node.title),
-      isFree: typeof res.isFree === 'boolean' ? res.isFree : true,
-    })),
-    practice: (node.practice || []).map((prac) => ({
-      ...prac,
-      url: sanitizeResourceUrl(prac, node.title),
-      isFree: typeof prac.isFree === 'boolean' ? prac.isFree : true,
-    })),
+  // Process all resources concurrently to prevent long delays
+  const sanitizedNodes = await Promise.all(filteredNodes.map(async (node) => {
+    const resources = await Promise.all((node.resources || []).map((res) => enrichResourceWithRealUrl(res, node.title)));
+    const practice = await Promise.all((node.practice || []).map((prac) => enrichResourceWithRealUrl(prac, node.title)));
+    return { ...node, resources, practice };
   }));
 
   const { nodes, milestones, totalEstimatedDurationDays } = buildRoadmapGraph(sanitizedNodes);
 
-  const roadmap = await Roadmap.findOneAndUpdate(
+  return Roadmap.findOneAndUpdate(
     { user: userId, targetRoleKey: normalizeRoleKey(targetRole) },
     {
       user: userId,
@@ -92,8 +77,6 @@ export async function generateRoadmap({ userId, targetRole, targetSkills }) {
     },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
-
-  return roadmap;
 }
 
 export async function listRoadmaps(userId) {
@@ -104,34 +87,28 @@ export async function listRoadmaps(userId) {
 
 export async function getRoadmapById({ roadmapId, userId }) {
   const roadmap = await Roadmap.findById(roadmapId);
-  if (!roadmap) {
-    throw new NotFoundError('Roadmap not found');
-  }
-  if (roadmap.user.toString() !== userId) {
-    throw new ForbiddenError('You do not have access to this roadmap');
-  }
+  if (!roadmap) throw new NotFoundError('Roadmap not found');
+  if (roadmap.user.toString() !== userId) throw new ForbiddenError('You do not have access to this roadmap');
   return roadmap;
 }
 
 export async function updateNodeStatus({ roadmapId, userId, nodeId, status }) {
-  const roadmap = await Roadmap.findById(roadmapId);
-  if (!roadmap) {
-    throw new NotFoundError('Roadmap not found');
-  }
-  if (roadmap.user.toString() !== userId) {
-    throw new ForbiddenError('You do not have access to this roadmap');
-  }
-
-  const node = roadmap.nodes.find((n) => n.id === nodeId);
-  if (!node) {
-    throw new NotFoundError(`No node with id "${nodeId}" exists on this roadmap`);
-  }
-
-  const updated = await Roadmap.findOneAndUpdate(
-    { _id: roadmapId, 'nodes.id': nodeId },
+  const roadmap = await Roadmap.findOneAndUpdate(
+    { _id: roadmapId, user: userId, 'nodes.id': nodeId },
     { $set: { 'nodes.$.status': status } },
     { new: true }
   );
+  if (!roadmap) throw new NotFoundError('Roadmap or node not found');
+  return roadmap;
+}
 
-  return updated;
+// New service function to handle custom user URLs
+export async function updateNodeResources({ roadmapId, userId, nodeId, resources, practice }) {
+  const roadmap = await Roadmap.findOneAndUpdate(
+    { _id: roadmapId, user: userId, 'nodes.id': nodeId },
+    { $set: { 'nodes.$.resources': resources, 'nodes.$.practice': practice } },
+    { new: true }
+  );
+  if (!roadmap) throw new NotFoundError('Roadmap or node not found');
+  return roadmap;
 }
