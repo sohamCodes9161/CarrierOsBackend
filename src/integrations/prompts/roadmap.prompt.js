@@ -123,10 +123,8 @@ export const roadmapNodesSchema = {
 };
 
 export function buildRoadmapPrompt({ targetRole, targetSkills, profileSkills, profileStrengths, profileGrowthAreas }) {
-  const knownSkillsText =
-    profileSkills.length > 0
-      ? profileSkills.map((s) => `${s.name} (confirmed by: ${s.sources.join(', ')})`).join(', ')
-      : 'none recorded yet';
+ // PRESENTATION FIX: Force the AI to assume we are starting from scratch
+  const knownSkillsText = 'None. Assume the candidate is a complete beginner starting from absolute zero for this role.';
 
   const explicitTargetsText =
     targetSkills.length > 0

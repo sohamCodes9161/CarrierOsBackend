@@ -60,6 +60,7 @@ async function callGroq({ prompt, schema, schemaName, useStrictSchema, temperatu
     messages,
     response_format,
     temperature, // Injected dynamic temperature
+    max_tokens: 6000, // <--- THE FIX: Explicitly allows the model to generate massive JSON arrays without cutting off early
   });
 }
 

@@ -70,7 +70,8 @@ export async function generateRoadmap({ userId, targetRole, targetSkills }) {
     temperature: 0.3,
   });
 
-  const filteredNodes = filterNodesAgainstKnownSkills(aiResult.nodes, profile.skills);
+  // PRESENTATION FIX: Don't delete any nodes the AI generates
+  const filteredNodes = aiResult.nodes;
 
   // Process all resources concurrently to prevent long delays
   const sanitizedNodes = await Promise.all(filteredNodes.map(async (node) => {
