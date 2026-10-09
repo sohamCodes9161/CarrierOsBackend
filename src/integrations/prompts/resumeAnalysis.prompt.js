@@ -75,19 +75,20 @@ export const resumeAnalysisSchema = {
 };
 
 export function buildResumeAnalysisPrompt({ resumeText, jobDescription }) {
-  return `You are an expert technical recruiter and a highly strict, unforgiving ATS (Applicant Tracking System).
-Your job is to critically evaluate this resume. AI models naturally inflate scores and act overly polite—you MUST NOT do this. Act like a ruthless resume screener.
+  return `You are an expert technical recruiter and a highly accurate ATS (Applicant Tracking System).
+Your job is to critically evaluate this resume. Do not artificially inflate scores, but be fair to entry-level candidates ("freshers"). 
 
-=== STRICT ATS SCORING RUBRIC (Start at 100, deduct points strictly) ===
-- Deduct 15-20 points if the resume severely lacks quantifiable metrics (numbers, percentages, scale, money saved, users reached).
-- Deduct 15 points if there is little to no real-world professional work experience (e.g., only short internships or academic projects).
-- Deduct 10 points for weak bullet points (e.g., starting with "Responsible for", missing strong action verbs, reading like a job description instead of achievements).
-- Deduct 10 points if soft skills (communication, teamwork, leadership) or business impact are entirely missing.
-- Deduct 10 points for poor structure, unparseable formatting, or missing standard sections (Summary, Experience, Education, Skills).
-An average entry-level resume with no metrics and only school projects should score between 40-60, NOT 80+.
+=== REALISTIC ATS SCORING RUBRIC (Start at 100, deduct points accordingly) ===
+- IMPACT & METRICS (Deduct up to 15 pts): If bullet points lack quantifiable scale or results (e.g., numbers, performance improvements, team size).
+- ACTION VERBS (Deduct up to 10 pts): For weak phrasing (e.g., starting with "Responsible for", "Worked on") or reading like a generic task list instead of achievements.
+- EXPERIENCE vs PROJECTS (Deduct up to 15 pts): Real-world ATS systems value projects for freshers. DO NOT penalize for lacking professional experience IF the candidate has strong, relevant academic or personal projects. Deduct points ONLY if the resume has NEITHER professional experience NOR substantial technical projects.
+- FORMATTING & STRUCTURE (Deduct up to 10 pts): For poor structure, walls of text, or missing standard sections (Summary, Education, Skills, Projects/Experience).
+- SOFT SKILLS & BUSINESS CONTEXT (Deduct up to 5 pts): If absolutely no collaboration, leadership, or communication skills are demonstrated.
+
+A strong fresher resume with good projects but missing metrics should score roughly 75-85. A resume with no projects, no experience, and poor formatting should score below 60.
 
 === FEEDBACK & IMPROVEMENTS ===
-- Your 'weaknesses' and 'sectionFeedback' MUST reflect the point deductions (e.g., "Bullet points lack quantifiable impact metrics").
+- Your 'weaknesses' and 'sectionFeedback' MUST reflect the point deductions accurately.
 - For 'suggestedBulletImprovements', rewrite the weakest bullets using the XYZ formula: "Accomplished [X] as measured by [Y], by doing [Z]". Do not invent fake metrics, but use placeholders like [X]% or [number] to show the candidate where to insert their own data.
 
 RESUME TEXT:
@@ -99,7 +100,7 @@ ${
   jobDescription
     ? `=== JOB MATCH RUBRIC ===
 - Start at 100. Deduct 5-10 points for EVERY major required skill, technology, or requirement missing from the resume.
-- Deduct 20 points if they lack the explicitly required years of experience.
+- Deduct 15 points if they severely lack the explicitly required years of experience (but account for project experience if it's a junior role).
 - If the resume is completely irrelevant to the job description, the score should be below 30.
 
 JOB DESCRIPTION:
@@ -109,5 +110,5 @@ ${jobDescription}
     : 'No job description was provided - set jobMatchScore to -1 and missingKeywords to an empty array.'
 }
 
-Provide your analysis strictly following the response schema. Do not inflate the scores.`;
+Provide your analysis strictly following the response schema.`;
 }
