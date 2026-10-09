@@ -35,7 +35,7 @@ export async function uploadAndAnalyzeResume({ userId, file, jobDescription }) {
     prompt,
     responseSchema: resumeAnalysisSchema,
     schemaName: resumeAnalysisSchemaName,
-    temperature: 0.1, // STRICT TEMPERATURE: Prevents inflated, optimistic scoring
+    temperature: 0.0, // STRICT TEMPERATURE: Forces zero creativity for consistent scoring
   });
 
   const analysis = await ResumeAnalysis.create({

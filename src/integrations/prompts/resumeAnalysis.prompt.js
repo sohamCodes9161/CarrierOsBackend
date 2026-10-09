@@ -78,14 +78,14 @@ export function buildResumeAnalysisPrompt({ resumeText, jobDescription }) {
   return `You are an expert technical recruiter and a highly accurate ATS (Applicant Tracking System).
 Your job is to critically evaluate this resume. Do not artificially inflate scores, but be fair to entry-level candidates ("freshers"). 
 
-=== REALISTIC ATS SCORING RUBRIC (Start at 100, deduct points accordingly) ===
-- IMPACT & METRICS (Deduct up to 15 pts): If bullet points lack quantifiable scale or results (e.g., numbers, performance improvements, team size).
-- ACTION VERBS (Deduct up to 10 pts): For weak phrasing (e.g., starting with "Responsible for", "Worked on") or reading like a generic task list instead of achievements.
-- EXPERIENCE vs PROJECTS (Deduct up to 15 pts): Real-world ATS systems value projects for freshers. DO NOT penalize for lacking professional experience IF the candidate has strong, relevant academic or personal projects. Deduct points ONLY if the resume has NEITHER professional experience NOR substantial technical projects.
-- FORMATTING & STRUCTURE (Deduct up to 10 pts): For poor structure, walls of text, or missing standard sections (Summary, Education, Skills, Projects/Experience).
-- SOFT SKILLS & BUSINESS CONTEXT (Deduct up to 5 pts): If absolutely no collaboration, leadership, or communication skills are demonstrated.
+=== REALISTIC ATS SCORING RUBRIC (Start at 100, deduct points exactly as follows) ===
+- IMPACT & METRICS: Deduct EXACTLY 15 points if the majority of bullet points lack quantifiable scale or results (e.g., missing numbers, percentages, or user impact). 
+- ACTION VERBS: Deduct EXACTLY 10 points if bullet points read like generic task lists or start with weak verbs ("Responsible for", "Worked on").
+- EXPERIENCE vs PROJECTS: Deduct EXACTLY 15 points ONLY IF the resume lacks BOTH real-world professional experience AND substantial technical projects. (Do not penalize freshers if they have strong projects).
+- FORMATTING & STRUCTURE: Deduct EXACTLY 10 points for missing standard sections (Summary, Education, Skills, Projects/Experience) or dense, unparseable walls of text.
+- SOFT SKILLS: Deduct EXACTLY 5 points if there is zero mention of teamwork, communication, or leadership.
 
-A strong fresher resume with good projects but missing metrics should score roughly 75-85. A resume with no projects, no experience, and poor formatting should score below 60.
+CRITICAL INSTRUCTION: You must calculate the atsScore strictly by subtracting the exact penalties above from 100. Do not let the presence of a matching job description influence the base atsScore.
 
 === FEEDBACK & IMPROVEMENTS ===
 - Your 'weaknesses' and 'sectionFeedback' MUST reflect the point deductions accurately.
