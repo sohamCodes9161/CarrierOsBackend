@@ -1,3 +1,34 @@
+// --- 1. GATEKEEPER (VALIDATOR) SCHEMA & PROMPT ---
+export const roleValidationSchemaName = 'role_validation';
+
+export const roleValidationSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    isValidTechRole: { 
+      type: 'boolean', 
+      description: 'True if the input is a valid software, tech, or IT role.' 
+    },
+    reason: { 
+      type: 'string',
+      description: 'Short explanation of why it is valid or invalid.'
+    }
+  },
+  required: ['isValidTechRole', 'reason'],
+};
+
+export function buildRoleValidationPrompt(targetRole, targetSkills) {
+  const skillsText = targetSkills?.length ? targetSkills.join(', ') : 'None';
+  return `You are a career validator. Check if the following user input represents a genuine software, IT, or tech-related job role/domain.
+  
+Input Role: "${targetRole}"
+Input Skills: ${skillsText}
+
+If the input is gibberish (e.g. "eihfiehfer"), completely unrelated to tech (e.g. "Pizza Chef"), or invalid, set isValidTechRole to false.
+If it's a valid tech direction (e.g. "JavaScript", "Frontend", "Data Science", "DevOps", "my sql"), set isValidTechRole to true.`;
+}
+
+// --- 2. MAIN ROADMAP SCHEMA & PROMPT ---
 export const roadmapNodesSchemaName = 'roadmap_nodes';
 
 export const roadmapNodesSchema = {

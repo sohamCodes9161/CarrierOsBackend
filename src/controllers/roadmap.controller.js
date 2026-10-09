@@ -38,7 +38,6 @@ export const updateNodeStatus = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Node status updated', data: { roadmap } });
 });
 
-// Add this below your existing exports
 export const updateNodeResources = asyncHandler(async (req, res) => {
   const roadmap = await roadmapService.updateNodeResources({
     roadmapId: req.params.id,
@@ -48,4 +47,12 @@ export const updateNodeResources = asyncHandler(async (req, res) => {
     practice: req.body.practice,
   });
   sendSuccess(res, { message: 'Resources updated successfully', data: { roadmap } });
+});
+
+export const removeRoadmap = asyncHandler(async (req, res) => {
+  await roadmapService.deleteRoadmap({
+    roadmapId: req.params.id,
+    userId: req.userId,
+  });
+  sendSuccess(res, { message: 'Roadmap deleted successfully' });
 });

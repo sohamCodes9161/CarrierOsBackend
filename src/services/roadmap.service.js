@@ -1,7 +1,14 @@
 import { Roadmap } from '../models/Roadmap.model.js';
 import { CareerProfile } from '../models/CareerProfile.model.js';
 import { generateStructuredContent } from '../integrations/groq.integration.js';
-import { buildRoadmapPrompt, roadmapNodesSchema, roadmapNodesSchemaName } from '../integrations/prompts/roadmap.prompt.js';
+import { 
+  buildRoadmapPrompt, 
+  roadmapNodesSchema, 
+  roadmapNodesSchemaName,
+  buildRoleValidationPrompt,
+  roleValidationSchema,
+  roleValidationSchemaName
+} from '../integrations/prompts/roadmap.prompt.js';
 import { computeSkillGap, filterNodesAgainstKnownSkills } from '../utils/skillGapAnalyzer.js';
 import { buildRoadmapGraph } from '../utils/roadmapGraph.js';
 import { BadRequestError, NotFoundError, ForbiddenError } from '../errors/AppError.js';
@@ -30,6 +37,20 @@ async function enrichResourceWithRealUrl(resource, nodeTitle) {
 }
 
 export async function generateRoadmap({ userId, targetRole, targetSkills }) {
+  // 1. GATEKEEPER CHECK: Is the role valid?
+  const validationPrompt = buildRoleValidationPrompt(targetRole, targetSkills);
+  const validationResult = await generateStructuredContent({
+    prompt: validationPrompt,
+    responseSchema: roleValidationSchema,
+    schemaName: roleValidationSchemaName,
+    temperature: 0.1,
+  });
+
+  if (!validationResult.isValidTechRole) {
+    throw new BadRequestError(`Invalid input: ${validationResult.reason}`);
+  }
+
+  // 2. PROCEED WITH ROADMAP GENERATION
   const profile = await CareerProfile.findOne({ user: userId });
   if (!profile) throw new BadRequestError('Generate a career profile first before requesting a roadmap.');
 
@@ -102,7 +123,6 @@ export async function updateNodeStatus({ roadmapId, userId, nodeId, status }) {
   return roadmap;
 }
 
-// New service function to handle custom user URLs
 export async function updateNodeResources({ roadmapId, userId, nodeId, resources, practice }) {
   const roadmap = await Roadmap.findOneAndUpdate(
     { _id: roadmapId, user: userId, 'nodes.id': nodeId },
@@ -111,4 +131,12 @@ export async function updateNodeResources({ roadmapId, userId, nodeId, resources
   );
   if (!roadmap) throw new NotFoundError('Roadmap or node not found');
   return roadmap;
+}
+
+export async function deleteRoadmap({ roadmapId, userId }) {
+  const deleted = await Roadmap.findOneAndDelete({ _id: roadmapId, user: userId });
+  if (!deleted) {
+    throw new NotFoundError('Roadmap not found or you do not have permission to delete it');
+  }
+  return deleted;
 }
