@@ -143,8 +143,14 @@ CANDIDATE'S KNOWN GROWTH AREAS: ${profileGrowthAreas.length > 0 ? profileGrowthA
 
 ${explicitTargetsText}
 
-Propose a set of roadmap topics (nodes) that would take this candidate from their current state toward being genuinely ready for a "${targetRole}" role. For each node:
-- Break the topic down into a actionable "checklist" of 3-6 sub-concepts.
+CRITICAL INSTRUCTION ON SCOPE & DIFFICULTY (THE "0 TO 100" RULE):
+1. DEFAULT TO BEGINNER: Unless the target role explicitly implies a senior/advanced position (e.g., "Senior Architect"), you MUST assume the user is starting from scratch (0 to 100).
+2. START WITH THE BASICS: Your first several nodes MUST cover the absolute fundamentals of the requested stack (e.g., for MERN: start with basic JS, React fundamentals, Node/Express basics, MongoDB CRUD). 
+3. DO NOT SKIP FUNDAMENTALS: Only skip basic topics if they are explicitly listed in the "CANDIDATE'S CURRENT SKILLS" section above.
+4. LIMIT ADVANCED DEVOPS: Do not aggressively push advanced production tools (like Docker, CI/CD, Kubernetes, Microservices, or strict TypeScript) unless the user explicitly requested them in their skills list, or place them only at the very end as a final "nice-to-have" polish. Keep the core focus on the primary technologies of the role.
+
+Propose a set of roadmap topics (nodes) that would take this candidate from their current state toward being genuinely ready for the "${targetRole}" goal. For each node:
+- Break the topic down into an actionable "checklist" of 3-6 sub-concepts.
 - Suggest 2-3 high-quality "resources". You MUST provide REAL, VALID URLs. To prevent dead links, rely exclusively on canonical sources: official documentation (e.g., MDN, React Docs, AWS Docs), Wikipedia, freeCodeCamp, GeeksforGeeks, or widely recognized YouTube channels (e.g., Traversy Media, Fireship).
 - Provide 1-2 "practice" links. These should point to interactive playgrounds, LeetCode, GitHub templates, or guided tutorials.
 - Mark resources accurately with "isFree" (true/false).
