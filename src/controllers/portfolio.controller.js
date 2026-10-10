@@ -12,6 +12,12 @@ export const updatePortfolio = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Portfolio updated', data: { portfolio } });
 });
 
+export const uploadProfilePhoto = asyncHandler(async (req, res) => {
+  if (!req.file) throw new Error('No file uploaded');
+  const portfolio = await portfolioService.uploadProfilePhoto(req.userId, req.file);
+  sendSuccess(res, { message: 'Profile photo updated', data: { portfolio } });
+});
+
 export const quickStart = asyncHandler(async (req, res) => {
   const portfolio = await portfolioService.quickStart(req.userId);
   sendSuccess(res, { message: 'Portfolio pre-filled from your existing data', data: { portfolio } });
@@ -52,8 +58,6 @@ export const getPublicPortfolio = asyncHandler(async (req, res) => {
   sendSuccess(res, { data: { portfolio } });
 });
 
-// --- Section CRUD: projects / experience / education / achievements ---
-
 function makeSectionHandlers(section) {
   return {
     add: asyncHandler(async (req, res) => {
@@ -92,3 +96,8 @@ export const projects = makeSectionHandlers('projects');
 export const experience = makeSectionHandlers('experience');
 export const education = makeSectionHandlers('education');
 export const achievements = makeSectionHandlers('achievements');
+
+export const curateSkills = asyncHandler(async (req, res) => {
+  const portfolio = await portfolioService.curatePortfolioSkills(req.userId);
+  sendSuccess(res, { message: 'Skills curated with AI', data: { portfolio } });
+});

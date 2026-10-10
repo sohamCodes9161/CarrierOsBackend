@@ -10,6 +10,7 @@ import {
 import { isValidSlugFormat, isReservedSlug, mergeSkillsDedup, mergeProjectsDedup } from '../utils/portfolioSlug.js';
 import { computePublishReadiness } from '../utils/portfolioReadiness.js';
 import { BadRequestError, NotFoundError, ForbiddenError, ConflictError } from '../errors/AppError.js';
+import { uploadBufferToCloudinary } from '../integrations/cloudinary.integration.js';
 
 const VALID_SECTIONS = new Set(['projects', 'experience', 'education', 'achievements']);
 
@@ -45,7 +46,7 @@ export async function updatePortfolio({ userId, updates }) {
   }
 
   const updateDoc = { $setOnInsert: { user: userId } };
-  if (Object.keys($set).length > 0) updateDoc.$set = $set;
+  if (Object.keys($set).length > 0) updateDoc.$set =$set;
 
   return Portfolio.findOneAndUpdate({ user: userId }, updateDoc, {
     upsert: true,
@@ -54,12 +55,6 @@ export async function updatePortfolio({ userId, updates }) {
   });
 }
 
-/**
- * Pre-fills skills (from Career Profile) and suggested projects (from top
- * GitHub repos) into the portfolio. Deduplicated against existing content,
- * so this is safe to call more than once - it won't create duplicate
- * skills or re-add the same repo as a project on a second run.
- */
 export async function quickStart(userId) {
   const [careerProfile, githubAnalysis] = await Promise.all([
     CareerProfile.findOne({ user: userId }),
@@ -72,9 +67,41 @@ export async function quickStart(userId) {
 
   const portfolio = await getOrCreatePortfolioDoc(userId);
 
+  // --- NEW AI SKILL CURATION LOGIC ---
   if (careerProfile) {
-    const suggestedSkills = careerProfile.skills.map((s) => s.name);
-    portfolio.skills = mergeSkillsDedup(portfolio.skills, suggestedSkills);
+    const rawSkills = careerProfile.skills.map((s) => s.name);
+
+    const prompt = `You are an expert technical recruiter. Curate this list of skills down to a maximum of 15-20 high-impact, core technologies. 
+    Remove highly granular, redundant, or overly basic terms (e.g., remove 'array', 'npm', 'Functional Components', 'OOP', 'HTML5').
+    Keep primary languages, frameworks, and databases (e.g., 'React.js', 'Node.js', 'MongoDB', 'C++').
+    Do not invent new skills. Only use skills from the provided list.
+    
+    Raw skills: ${rawSkills.join(', ')}`;
+
+    const curatedSkillsSchema = {
+      type: "object",
+      properties: {
+        skills: {
+          type: "array",
+          items: { type: "string" },
+          description: "An array of 15-20 curated, high-level technical skills."
+        }
+      },
+      required: ["skills"]
+    };
+
+    try {
+      const aiResponse = await generateStructuredContent({
+        prompt,
+        responseSchema: curatedSkillsSchema,
+        schemaName: 'CuratedSkills'
+      });
+      
+      portfolio.skills = mergeSkillsDedup(portfolio.skills, aiResponse.skills);
+    } catch (error) {
+      console.error("AI Skill Curation failed, falling back to basic slice:", error);
+      portfolio.skills = mergeSkillsDedup(portfolio.skills, rawSkills.slice(0, 15));
+    }
   }
 
   if (githubAnalysis?.topRepos?.length > 0) {
@@ -93,8 +120,6 @@ export async function quickStart(userId) {
   await portfolio.save();
   return portfolio;
 }
-
-// --- Generic section CRUD (projects / experience / education / achievements) ---
 
 export async function addSectionItem({ userId, section, itemData }) {
   assertValidSection(section);
@@ -151,8 +176,6 @@ export async function reorderSectionItems({ userId, section, orderedIds }) {
   return portfolio;
 }
 
-// --- Publish flow ---
-
 export async function getPublishReadiness(userId) {
   const portfolio = await getOrCreatePortfolioDoc(userId);
   return computePublishReadiness(portfolio);
@@ -181,8 +204,6 @@ export async function unpublishPortfolio(userId) {
   return portfolio;
 }
 
-// --- Slug management ---
-
 export async function updateSlug({ userId, slug }) {
   if (!isValidSlugFormat(slug)) {
     throw new BadRequestError(
@@ -200,7 +221,7 @@ export async function updateSlug({ userId, slug }) {
 
   return Portfolio.findOneAndUpdate(
     { user: userId },
-    { $set: { slug }, $setOnInsert: { user: userId } },
+    { $set: { slug },$setOnInsert: { user: userId } },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
 }
@@ -216,18 +237,6 @@ export async function checkSlugAvailability(slug) {
   return existing ? { available: false, reason: 'taken' } : { available: true };
 }
 
-// --- Public access ---
-
-/**
- * Fetches a published portfolio by slug for public (unauthenticated)
- * viewing. Returns the exact same "not found" error whether the slug
- * doesn't exist at all or simply isn't published - never reveals which,
- * to avoid leaking the existence of a draft portfolio.
- *
- * Fields are selected explicitly rather than returning the raw document,
- * so internal fields (user id, view count, timestamps) can never leak
- * through this public endpoint even if the schema grows later.
- */
 export async function getPublicPortfolioBySlug(slug) {
   const portfolio = await Portfolio.findOneAndUpdate(
     { slug, isPublished: true },
@@ -252,10 +261,9 @@ export async function getPublicPortfolioBySlug(slug) {
     templateId: portfolio.templateId,
     themeColor: portfolio.themeColor,
     publishedAt: portfolio.publishedAt,
+    profilePhotoUrl: portfolio.profilePhotoUrl,
   };
 }
-
-// --- AI content improvement (suggest-only, never auto-applied) ---
 
 export async function improveContent({ section, text }) {
   const prompt = buildPortfolioContentPrompt({ section, text });
@@ -264,4 +272,56 @@ export async function improveContent({ section, text }) {
     responseSchema: portfolioContentSchema,
     schemaName: portfolioContentSchemaName,
   });
+}
+
+export async function uploadProfilePhoto(userId, file) {
+  const portfolio = await getOrCreatePortfolioDoc(userId);
+  const uploadResult = await uploadBufferToCloudinary(file.buffer, {
+    folder: 'portfolio_profiles',
+    transformation: [{ width: 500, height: 500, crop: 'fill', gravity: 'face' }]
+  });
+
+  portfolio.profilePhotoUrl = uploadResult.secure_url;
+  await portfolio.save();
+  return portfolio;
+}
+
+export async function curatePortfolioSkills(userId) {
+  const portfolio = await getOrCreatePortfolioDoc(userId);
+  if (!portfolio.skills || portfolio.skills.length === 0) {
+    return portfolio;
+  }
+
+  const prompt = `You are a technical recruiter. Filter and curate this list of skills down to a maximum of 15-20 core, high-impact technologies.
+  Remove overly granular concepts, redundant terms, or basic fundamentals (e.g., remove 'array', 'npm', 'HTML5', 'Functional Components', 'CRUD Operations', 'Async/Await').
+  Keep primary languages, frameworks, databases, and key tools (e.g., 'React.js', 'Node.js', 'MongoDB', 'C++', 'Tailwind CSS', 'Docker').
+  Do NOT add new skills. Return ONLY a subset of the input array.
+
+  Input skills: ${portfolio.skills.join(', ')}`;
+
+  const responseSchema = {
+    type: 'object',
+    properties: {
+      skills: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Curated list of 15-20 essential skills.'
+      }
+    },
+    required: ['skills']
+  };
+
+  try {
+    const aiResponse = await generateStructuredContent({
+      prompt,
+      responseSchema,
+      schemaName: 'CuratedSkillsResult'
+    });
+    portfolio.skills = aiResponse.skills;
+    await portfolio.save();
+  } catch (err) {
+    console.error('Skill curation failed:', err);
+  }
+
+  return portfolio;
 }

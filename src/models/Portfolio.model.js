@@ -19,7 +19,7 @@ const projectSchema = new mongoose.Schema({
   techStack: [String],
   githubUrl: String,
   liveUrl: String,
-  imageUrl: String, // external URL only - no upload endpoint in V1
+  imageUrl: String,
   featured: { type: Boolean, default: false },
   order: { type: Number, default: 0 },
 });
@@ -27,8 +27,8 @@ const projectSchema = new mongoose.Schema({
 const experienceSchema = new mongoose.Schema({
   company: { type: String, required: true },
   role: { type: String, required: true },
-  startDate: String, // free-text-ish (e.g. "2023-06") - portfolio dates vary in granularity
-  endDate: { type: String, default: null }, // null = present/ongoing
+  startDate: String,
+  endDate: { type: String, default: null },
   description: String,
   order: { type: Number, default: 0 },
 });
@@ -52,9 +52,10 @@ const achievementSchema = new mongoose.Schema({
 const portfolioSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
-    slug: { type: String, unique: true, sparse: true, index: true }, // sparse - not every portfolio has claimed a slug yet
+    slug: { type: String, unique: true, sparse: true, index: true },
     isPublished: { type: Boolean, default: false },
     publishedAt: { type: Date, default: null },
+    profilePhotoUrl: { type: String, default: null }, // NEW
     headline: { type: String, default: '' },
     bio: { type: String, default: '' },
     contact: { type: contactSchema, default: () => ({}) },

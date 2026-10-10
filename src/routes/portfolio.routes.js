@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import * as portfolioController from '../controllers/portfolio.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { validate } from '../middleware/validate.js';
+import upload from '../middleware/upload.js'; // THE FIX: Removed curly brackets here
 import {
   updatePortfolioSchema,
   updateSlugSchema,
@@ -36,7 +37,7 @@ const aiLimiter = rateLimit({
   message: { success: false, message: 'Too many AI content requests, please try again later' },
 });
 
-// --- Public routes (no auth) - registered before the authenticate() gate below ---
+// --- Public routes (no auth) ---
 router.get('/public/:slug', publicLimiter, portfolioController.getPublicPortfolio);
 router.get('/slug-availability/:slug', publicLimiter, portfolioController.checkSlugAvailability);
 
@@ -45,6 +46,7 @@ router.use(authenticate);
 
 router.get('/', portfolioController.getOwnPortfolio);
 router.patch('/', validate(updatePortfolioSchema), portfolioController.updatePortfolio);
+router.post('/photo', upload.single('photo'), portfolioController.uploadProfilePhoto);
 router.post('/quick-start', portfolioController.quickStart);
 
 router.get('/publish-readiness', portfolioController.getPublishReadiness);
@@ -74,5 +76,6 @@ router.post('/achievements', validate(achievementItemSchema), portfolioControlle
 router.patch('/achievements/:itemId', validate(achievementItemUpdateSchema), portfolioController.achievements.update);
 router.delete('/achievements/:itemId', portfolioController.achievements.remove);
 router.patch('/achievements/reorder', validate(reorderSchema), portfolioController.achievements.reorder);
+router.post('/curate-skills', portfolioController.curateSkills);
 
 export default router;
