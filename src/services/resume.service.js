@@ -4,18 +4,32 @@ import { extractTextFromBuffer } from '../integrations/textExtractor.js';
 import { uploadBufferToCloudinary, deleteFromCloudinary } from '../integrations/cloudinary.integration.js';
 import { generateStructuredContent } from '../integrations/groq.integration.js';
 import {
+  buildResumeValidationPrompt,
+  resumeValidationSchema,
+  resumeValidationSchemaName,
   buildResumeAnalysisPrompt,
   resumeAnalysisSchema,
   resumeAnalysisSchemaName,
 } from '../integrations/prompts/resumeAnalysis.prompt.js';
-import { NotFoundError, ForbiddenError } from '../errors/AppError.js';
+import { BadRequestError, NotFoundError, ForbiddenError } from '../errors/AppError.js';
 
 export async function uploadAndAnalyzeResume({ userId, file, jobDescription }) {
-  // 1. Deterministic text extraction first - fail fast before any upload/AI cost
-  // if the file isn't actually readable.
+  // 1. Deterministic text extraction first
   const extractedText = await extractTextFromBuffer(file.buffer, file.mimetype);
 
-  // 2. Store the original file in Cloudinary for the user's record.
+  // 2. GATEKEEPER CHECK: Is it actually a resume?
+  const validationResult = await generateStructuredContent({
+    prompt: buildResumeValidationPrompt(extractedText),
+    responseSchema: resumeValidationSchema,
+    schemaName: resumeValidationSchemaName,
+    temperature: 0.1, // Highly strict for validation
+  });
+
+  if (!validationResult.isValidResume) {
+    throw new BadRequestError(`Invalid file uploaded: ${validationResult.reason}. Please upload a valid resume.`);
+  }
+
+  // 3. Store the original file in Cloudinary
   const uploadResult = await uploadBufferToCloudinary(file.buffer, {
     filename: file.originalname,
   });
@@ -29,13 +43,13 @@ export async function uploadAndAnalyzeResume({ userId, file, jobDescription }) {
     extractedText,
   });
 
-  // 3. AI analysis via Groq, strictly schema-constrained.
+  // 4. AI analysis via Groq
   const prompt = buildResumeAnalysisPrompt({ resumeText: extractedText, jobDescription });
   const aiResult = await generateStructuredContent({
     prompt,
     responseSchema: resumeAnalysisSchema,
     schemaName: resumeAnalysisSchemaName,
-    temperature: 0.0, // STRICT TEMPERATURE: Forces zero creativity for consistent scoring
+    temperature: 0.2, // Low enough for consistency, high enough to prevent rigid math errors
   });
 
   const analysis = await ResumeAnalysis.create({
