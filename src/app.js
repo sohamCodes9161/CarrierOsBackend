@@ -20,7 +20,7 @@ import portfolioRoutes from './routes/portfolio.routes.js';
 import jobApplicationRoutes from './routes/jobApplication.routes.js';
 import jobSearchRoutes from './routes/jobSearch.routes.js';
 import quizRoutes from './routes/quiz.routes.js';
-
+import adminRoutes from './routes/admin.routes.js';
 
 import dashboardRoutes from './routes/dashboard.routes.js';
 const __filename = fileURLToPath(import.meta.url);
@@ -89,7 +89,7 @@ app.use('/api/v1/job-applications', jobApplicationRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/job-search', jobSearchRoutes);
 app.use('/api/v1/quizzes', quizRoutes);
-
+app.use('/api/v1/admin', adminRoutes);
 // --- 404 + error handling (must be last) ---
 app.use(notFoundHandler);
 app.use(errorHandler);

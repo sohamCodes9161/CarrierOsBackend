@@ -21,6 +21,11 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false,
     },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user',
+    },
    // Inside User.model.js
     usage: {
       date: { type: String, default: () => new Date().toISOString().split('T')[0] }, 
