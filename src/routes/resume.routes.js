@@ -6,6 +6,7 @@ import { authenticate } from '../middleware/authenticate.js';
 import { uploadResume } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
 import { resumeUploadSchema } from '../validators/resume.validator.js';
+import { checkUsageLimit } from '../middleware/usageLimiter.js'; // NEW
 
 const router = Router();
 
@@ -23,6 +24,7 @@ router.use(authenticate); // every resume route requires a logged-in user
 router.post(
   '/analyze',
   analyzeLimiter,
+  checkUsageLimit('resume_analyses', 2),  
   uploadResume,
   validate(resumeUploadSchema),
   resumeController.analyzeResume

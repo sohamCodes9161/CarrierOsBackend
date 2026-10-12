@@ -19,13 +19,26 @@ const userSchema = new mongoose.Schema(
     passwordHash: {
       type: String,
       required: true,
-      select: false, // never returned by default in queries
+      select: false,
+    },
+   // Inside User.model.js
+    usage: {
+      date: { type: String, default: () => new Date().toISOString().split('T')[0] }, 
+      interviews: { type: Number, default: 0 },
+      roadmaps: { type: Number, default: 0 },
+      portfolioCurations: { type: Number, default: 0 },
+      
+      // Matched to the exact strings you just used in your routes:
+      resume_analyses: { type: Number, default: 0 },
+      github_analyses: { type: Number, default: 0 },
+      quizzes: { type: Number, default: 0 },
+      career_profiles: { type: Number, default: 0 },
     },
   },
   { timestamps: true }
 );
 
-// Never leak passwordHash even if select('+passwordHash') was used upstream and then serialized
+// Never leak passwordHash
 userSchema.set('toJSON', {
   transform: (_doc, ret) => {
     delete ret.passwordHash;

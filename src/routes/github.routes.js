@@ -5,7 +5,7 @@ import * as githubController from '../controllers/github.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { validate } from '../middleware/validate.js';
 import { githubAnalyzeSchema } from '../validators/github.validator.js';
-
+import { checkUsageLimit } from '../middleware/usageLimiter.js'; // NEW
 const router = Router();
 
 const analyzeLimiter = rateLimit({
@@ -18,7 +18,7 @@ const analyzeLimiter = rateLimit({
 
 router.use(authenticate);
 
-router.post('/analyze', analyzeLimiter, validate(githubAnalyzeSchema), githubController.analyzeProfile);
+router.post('/analyze',analyzeLimiter, checkUsageLimit('github_analyses', 2), validate(githubAnalyzeSchema), githubController.analyzeProfile);
 router.get('/analyses', githubController.listAnalyses);
 router.get('/analyses/:id', githubController.getAnalysis);
 
