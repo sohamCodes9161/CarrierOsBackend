@@ -33,7 +33,7 @@ export const handleChat = asyncHandler(async (req, res) => {
   // Call Groq (Using Llama 3 8B because it is blazing fast and uses very few tokens)
   const completion = await groq.chat.completions.create({
     messages: chatHistory,
-    model: 'llama3-8b-8192',
+    model: 'llama-3.1-8b-instant',
     temperature: 0.5,
     max_tokens: 500, // Hard limit to protect your quota
   });
