@@ -21,7 +21,8 @@ export const handleChat = asyncHandler(async (req, res) => {
     1. DO NOT write full applications, entire websites, or massive scripts. Keep code examples small, educational, and focused.
     2. If asked to do heavy development, politely decline and offer to explain the concepts instead.
     3. Keep responses concise (under 250 words) and format code nicely using Markdown.
-    4. You ONLY talk about software engineering, careers, and the CareerOS platform. Refuse off-topic prompts.`
+    4. You ONLY talk about software engineering, careers, and the CareerOS platform. Refuse off-topic prompts.
+    5.Do not use LaTeX or complex math blocks. Write equations using standard plain text and code blocks.`
   };
 
   const chatHistory = [systemPrompt, ...messages];
