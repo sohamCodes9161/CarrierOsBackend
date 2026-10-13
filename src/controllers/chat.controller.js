@@ -7,18 +7,15 @@ const groq = new Groq({ apiKey: env.GROQ_API_KEY });
 
 export const handleChat = asyncHandler(async (req, res) => {
   const { messages, context } = req.body;
-  const user = req.user; // We will attach user name from DB in middleware later if needed, or get it from frontend.
 
-  // The System Prompt gives the AI its personality and rules
   const systemPrompt = {
     role: 'system',
     content: `You are the "CareerOS AI Mentor", a highly skilled, supportive Senior Software Engineer. 
     The user's name is ${context?.userName || 'Student'}. They are currently on the "${context?.page || 'Dashboard'}" page of CareerOS.
     
     YOUR CAPABILITIES:
-    1. Answer technical/coding questions, explain DSA concepts, and debug code snippets.
-    2. Suggest improvements for resumes, portfolios, and interview answers.
-    3. Help them navigate CareerOS based on the page they are currently on.
+    1. Answer technical/coding questions, explain DSA concepts, debug code snippets, and suggest improvements.
+    2. Help them navigate CareerOS based on the page they are currently on.
     
     YOUR RESTRICTIONS:
     1. DO NOT write full applications, entire websites, or massive scripts. Keep code examples small, educational, and focused.
@@ -27,15 +24,14 @@ export const handleChat = asyncHandler(async (req, res) => {
     4. You ONLY talk about software engineering, careers, and the CareerOS platform. Refuse off-topic prompts.`
   };
 
-  // Combine the system prompt with the user's chat history
   const chatHistory = [systemPrompt, ...messages];
 
-  // Call Groq (Using Llama 3 8B because it is blazing fast and uses very few tokens)
+  // Uses your exact .env configuration variable name: GROQ_MODEL
   const completion = await groq.chat.completions.create({
     messages: chatHistory,
-    model: 'llama-3.1-8b-instant',
+    model: env.GROQ_MODEL,
     temperature: 0.5,
-    max_tokens: 500, // Hard limit to protect your quota
+    max_tokens: 500,
   });
 
   const reply = completion.choices[0].message;
