@@ -21,7 +21,7 @@ import jobApplicationRoutes from './routes/jobApplication.routes.js';
 import jobSearchRoutes from './routes/jobSearch.routes.js';
 import quizRoutes from './routes/quiz.routes.js';
 import adminRoutes from './routes/admin.routes.js';
-
+import chatRoutes from './routes/chat.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -85,6 +85,7 @@ app.use('/api/v1/interviews', interviewRoutes);
 app.use('/api/v1/career-profile', careerProfileRoutes);
 app.use('/api/v1/roadmap', roadmapRoutes);
 app.use('/api/v1/portfolio', portfolioRoutes);
+app.use('/api/v1/chat', chatRoutes);
 app.use('/api/v1/job-applications', jobApplicationRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/job-search', jobSearchRoutes);

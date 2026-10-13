@@ -22,6 +22,7 @@ export const checkUsageLimit = (feature, limit) => {
           github_analyses: 0,  // <-- Added
           quizzes: 0,          // <-- Added
           career_profiles: 0,  // <-- Added
+          chat_messages: 0,   // <-- Added
         };
       }
 

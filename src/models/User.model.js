@@ -38,6 +38,7 @@ const userSchema = new mongoose.Schema(
       github_analyses: { type: Number, default: 0 },
       quizzes: { type: Number, default: 0 },
       career_profiles: { type: Number, default: 0 },
+      chat_messages: { type: Number, default: 0 },
     },
   },
   { timestamps: true }
