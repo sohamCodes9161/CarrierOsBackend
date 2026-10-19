@@ -20,19 +20,18 @@ export const handleChat = asyncHandler(async (req, res) => {
     YOUR RESTRICTIONS:
     1. DO NOT write full applications, entire websites, or massive scripts. Keep code examples small, educational, and focused.
     2. If asked to do heavy development, politely decline and offer to explain the concepts instead.
-    3. Keep responses concise (under 250 words) and format code nicely using Markdown.
+    3. Keep responses concise and format code nicely using Markdown.
     4. You ONLY talk about software engineering, careers, and the CareerOS platform. Refuse off-topic prompts.
-    5.Do not use LaTeX or complex math blocks. Write equations using standard plain text and code blocks.`
+    5. Do not use LaTeX or complex math blocks. Write equations using standard plain text and code blocks.`
   };
 
   const chatHistory = [systemPrompt, ...messages];
 
-  // Uses your exact .env configuration variable name: GROQ_MODEL
   const completion = await groq.chat.completions.create({
     messages: chatHistory,
     model: env.GROQ_MODEL,
     temperature: 0.5,
-    max_tokens: 500,
+    max_tokens: 3000, // Increased to prevent code cutoff
   });
 
   const reply = completion.choices[0].message;

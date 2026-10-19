@@ -79,9 +79,12 @@ Respond ONLY with valid, raw JSON (no markdown block formatting, no extra text) 
 
     const data = await response.json();
     const rawContent = data.choices?.[0]?.message?.content || '[]';
-    const cleanedJson = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    // Extract everything between the first [ and last ] to strip conversational text
+    const match = rawContent.match(/\[[\s\S]*\]/);
+    const jsonString = match ? match[0] : '[]';
 
-    return JSON.parse(cleanedJson);
+    return JSON.parse(jsonString);
   } catch (error) {
     // Fallback static fallback questions if AI key is missing or fails
     return [
