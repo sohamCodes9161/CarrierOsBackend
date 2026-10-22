@@ -43,6 +43,14 @@ export const env = {
   YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY || '',
   GOOGLE_SEARCH_API_KEY: process.env.GOOGLE_SEARCH_API_KEY || '',
   GOOGLE_SEARCH_CX: process.env.GOOGLE_SEARCH_CX || '',
+
+  SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
+  SMTP_PORT: Number(process.env.SMTP_PORT || 465),
+  SMTP_USER: process.env.SMTP_USER || 'carrieros001@gmail.com',
+  SMTP_PASS: process.env.SMTP_PASS || '',
+  SMTP_FROM: process.env.SMTP_FROM || 'CareerOS <carrieros001@gmail.com>',
+  PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES: Number(process.env.PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES || 15),
+  RESET_PASSWORD_URL: process.env.RESET_PASSWORD_URL || 'http://localhost:5173/reset-password'
 };
 
 export { required };

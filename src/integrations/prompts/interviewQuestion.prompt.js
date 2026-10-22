@@ -59,6 +59,8 @@ export function buildInterviewQuestionPrompt({
 
 Balance these approaches so the interview feels dynamic, adaptive, and not like a predetermined checklist. Always map out your 'thoughtProcess' first to explain why you are asking the question.`;
 
+  const absurdRoleHandling = `If the requested role ("${role}") or skills ("${targetSkills.join(', ')}") are framed around a specific tech library or framework (like React, Node, Python) treat it as a role specializing in that technology. If they are purely fictional, humorous, or creative (e.g., 'Professional Pizza Eater', 'Jedi', 'Sleeping'), PLAY ALONG completely. Treat the absurd topic with absolute, deadpan professionalism, generating highly technical-sounding, complex interview questions tailored specifically to the physics, logistics, or strategy of that topic.`;
+
   return `You are conducting a ${interviewType} interview for a ${role} position at ${difficulty} difficulty.
 Target skills to probe: ${targetSkills.length > 0 ? targetSkills.join(', ') : 'general role-relevant skills'}.
 
@@ -68,6 +70,9 @@ This is question ${questionNumber} of ${totalQuestions}.
 
 INTERVIEWER BEHAVIOR INSTRUCTIONS:
 ${behavioralGuidance}
+
+ROLE & DOMAIN HANDLING:
+${absurdRoleHandling}
 
 PRIOR QUESTIONS AND ANSWERS IN THIS INTERVIEW:
 ${historyBlock}
