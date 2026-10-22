@@ -50,7 +50,8 @@ export const env = {
   SMTP_PASS: process.env.SMTP_PASS || '',
   SMTP_FROM: process.env.SMTP_FROM || 'CareerOS <carrieros001@gmail.com>',
   PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES: Number(process.env.PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES || 15),
-  RESET_PASSWORD_URL: process.env.RESET_PASSWORD_URL || 'http://localhost:5173/reset-password'
+  RESET_PASSWORD_URL: process.env.RESET_PASSWORD_URL || 'http://localhost:5173/reset-password',
+  BREVO_API_KEY: process.env.BREVO_API_KEY || ''
 };
 
 export { required };
