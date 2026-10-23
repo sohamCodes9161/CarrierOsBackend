@@ -3,10 +3,17 @@ import { sendSuccess } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { setRefreshTokenCookie, clearRefreshTokenCookie, REFRESH_COOKIE_NAME } from '../utils/cookies.js';
 
+// UPDATE: register
 export const register = asyncHandler(async (req, res) => {
-  const { user, accessToken, refreshToken, refreshTokenExpiresAt } = await authService.registerUser(req.body);
+  const result = await authService.registerUser(req.body);
+  sendSuccess(res, { statusCode: 200, message: 'Verification code sent', data: result });
+});
+
+// NEW: verifyRegistration
+export const verifyRegistration = asyncHandler(async (req, res) => {
+  const { user, accessToken, refreshToken, refreshTokenExpiresAt } = await authService.verifyRegistrationOtp(req.body);
   setRefreshTokenCookie(res, refreshToken, refreshTokenExpiresAt);
-  sendSuccess(res, { statusCode: 201, message: 'Account created successfully', data: { user, accessToken } });
+  sendSuccess(res, { statusCode: 201, message: 'Account verified and created successfully', data: { user, accessToken } });
 });
 
 export const login = asyncHandler(async (req, res) => {

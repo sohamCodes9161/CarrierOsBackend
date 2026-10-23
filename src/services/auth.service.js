@@ -3,10 +3,11 @@ import bcrypt from 'bcryptjs';
 import { User } from '../models/User.model.js';
 import { RefreshToken } from '../models/RefreshToken.model.js';
 import { PasswordResetToken } from '../models/PasswordResetToken.model.js';
-import { sendPasswordResetEmail } from '../integrations/email.integration.js';
 import { env } from '../config/env.js';
 import { signAccessToken, generateRefreshToken, hashRefreshToken } from '../utils/token.js';
 import { ConflictError, UnauthorizedError, BadRequestError } from '../errors/AppError.js';
+import { sendPasswordResetEmail, sendVerificationEmail } from '../integrations/email.integration.js';
+
 
 const SALT_ROUNDS = 10;
 
@@ -20,14 +21,70 @@ async function issueTokenPair(userId) {
 }
 
 export async function registerUser({ name, email, password }) {
-  const existing = await User.findOne({ email });
-  if (existing) {
-    throw new ConflictError('An account with this email already exists');
+  const existingUser = await User.findOne({ email });
+
+  if (existingUser) {
+    if (existingUser.isEmailVerified) {
+      throw new ConflictError('An account with this email already exists');
+    }
+    // If unverified, we will overwrite their OTP and resend it
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-  const user = await User.create({ name, email, passwordHash });
+  
+  // Generate a fresh 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
+  if (existingUser) {
+    // FIX: Use updateOne instead of .save() to guarantee hidden fields are overwritten
+    await User.updateOne(
+      { _id: existingUser._id },
+      { 
+        $set: { 
+          name, 
+          passwordHash, 
+          verificationOtp: otp, 
+          verificationOtpExpiresAt: expiresAt 
+        } 
+      }
+    );
+  } else {
+    await User.create({ 
+      name, 
+      email, 
+      passwordHash, 
+      isEmailVerified: false,
+      verificationOtp: otp,
+      verificationOtpExpiresAt: expiresAt
+    });
+  }
+
+  await sendVerificationEmail(email, otp);
+  return { requiresVerification: true, email };
+}
+
+export async function verifyRegistrationOtp({ email, otp }) {
+  const user = await User.findOne({ email }).select('+verificationOtp +verificationOtpExpiresAt');
+  
+  if (!user || user.isEmailVerified) {
+    throw new BadRequestError('User not found or already verified');
+  }
+
+  // Debugging log: See exactly what the database is expecting vs what you typed
+  console.log(`[OTP Check] DB Expects: "${user.verificationOtp}" | User Entered: "${otp}"`);
+
+  if (user.verificationOtp !== otp || user.verificationOtpExpiresAt < new Date()) {
+    throw new BadRequestError('Invalid or expired verification code');
+  }
+
+  // Mark as verified and clean up OTP
+  user.isEmailVerified = true;
+  user.verificationOtp = undefined;
+  user.verificationOtpExpiresAt = undefined;
+  await user.save();
+
+  // Issue tokens only AFTER successful verification
   const tokens = await issueTokenPair(user._id);
   return { user, ...tokens };
 }
@@ -37,11 +94,15 @@ export async function loginUser({ email, password }) {
   if (!user) {
     throw new UnauthorizedError('Invalid email or password');
   }
-
+  if (!user.isEmailVerified) {
+    throw new UnauthorizedError('Please verify your email before logging in');
+  }
   const isMatch = await bcrypt.compare(password, user.passwordHash);
   if (!isMatch) {
     throw new UnauthorizedError('Invalid email or password');
   }
+
+
 
   const tokens = await issueTokenPair(user._id);
   return { user, ...tokens };

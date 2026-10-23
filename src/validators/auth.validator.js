@@ -30,3 +30,7 @@ export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
   newPassword: passwordSchema,
 });
+export const verifyRegistrationSchema = z.object({
+  email: z.string().email(),
+  otp: z.string().length(6),
+});

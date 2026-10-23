@@ -5,8 +5,12 @@ import * as authController from '../controllers/auth.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { validate } from '../middleware/validate.js';
 import { 
-  registerSchema, loginSchema, forgotPasswordSchema, 
-  resetPasswordSchema, changePasswordSchema 
+  registerSchema, 
+  loginSchema, 
+  forgotPasswordSchema, 
+  resetPasswordSchema, 
+  changePasswordSchema,
+  verifyRegistrationSchema // Add this schema to your validator file
 } from '../validators/auth.validator.js';
 
 const router = Router();
@@ -25,7 +29,10 @@ const passwordResetLimiter = rateLimit({
   message: { success: false, message: 'Too many password reset requests. Try again later.' }
 });
 
+// Registration & Authentication
 router.post('/register', authLimiter, validate(registerSchema), authController.register);
+// NEW: OTP Verification Route
+router.post('/verify-registration', authLimiter, validate(verifyRegistrationSchema), authController.verifyRegistration);
 router.post('/login', authLimiter, validate(loginSchema), authController.login);
 router.post('/refresh', authController.refresh);
 router.post('/logout', authController.logout);

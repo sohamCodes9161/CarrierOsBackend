@@ -37,3 +37,39 @@ export async function sendPasswordResetEmail(toEmail, resetLink) {
     console.error('[email] Failed to send password reset email:', err.message);
   }
 }
+
+export async function sendVerificationEmail(toEmail, otp) {
+  if (!env.BREVO_API_KEY) {
+    console.log(`[email:dev-mode] Registration OTP for ${toEmail}: ${otp}`);
+    return;
+  }
+
+  try {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': env.BREVO_API_KEY,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: { email: "carrieros001@gmail.com", name: "CareerOS" },
+        to: [{ email: toEmail }],
+        subject: 'Verify your CareerOS account',
+        htmlContent: `
+          <h2>Welcome to CareerOS!</h2>
+          <p>Your verification code is: <strong>${otp}</strong></p>
+          <p>Enter this code in the app to complete your registration. This code expires in 10 minutes.</p>
+        `
+      })
+    });
+
+    if (!response.ok) {
+      console.error('[email] Brevo API rejected the request:', await response.json());
+    } else {
+      console.log(`[email] Verification OTP sent successfully to ${toEmail}`);
+    }
+  } catch (err) {
+    console.error('[email] Failed to send verification email:', err.message);
+  }
+}
