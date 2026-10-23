@@ -5,8 +5,8 @@ import { checkUsageLimit } from '../middleware/usageLimiter.js';
 
 const router = Router();
 
-// Limit to 3 messages per day per user
+// Limit to 15 messages per day per user
 router.use(authenticate);
-router.post('/', checkUsageLimit('chat_messages', 3), chatController.handleChat);
+router.post('/', checkUsageLimit('chat_messages', 15), chatController.handleChat);
 
 export default router;
