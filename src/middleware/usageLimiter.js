@@ -1,41 +1,46 @@
 import { User } from '../models/User.model.js';
 
+function createFreshUsage(today) {
+  return {
+    date: today,
+    interviews: 0,
+    roadmaps: 0,
+    portfolioCurations: 0,
+    resume_analyses: 0,
+    github_analyses: 0,
+    quizzes: 0,
+    career_profiles: 0,
+    chat_messages: 0,
+  };
+}
+
 export const checkUsageLimit = (feature, limit) => {
   return async (req, res, next) => {
     try {
-      const user = await User.findById(req.userId);
+      const userId = req.user?._id || req.user?.id || req.userId;
+      const user = await User.findById(userId);
       if (!user) {
         return res.status(401).json({ success: false, message: 'User not found' });
       }
 
       const today = new Date().toISOString().split('T')[0];
 
-      // If it's a new day, reset all their counters to 0
-      // Inside usageLimiter.js (Update this block)
-      if (user.usage.date !== today) {
-        user.usage = {
-          date: today,
-          interviews: 0,
-          roadmaps: 0,
-          portfolioCurations: 0,
-          resume_analyses: 0,  // <-- Added
-          github_analyses: 0,  // <-- Added
-          quizzes: 0,          // <-- Added
-          career_profiles: 0,  // <-- Added
-          chat_messages: 0,   // <-- Added
-        };
+      // Reset daily counters if it's a new UTC day
+      if (!user.usage || user.usage.date !== today) {
+        user.usage = createFreshUsage(today);
       }
 
-      // Check if they hit the limit
-      if (user.usage[feature] >= limit) {
+      const isAdmin = user.role === 'admin';
+
+      // Admins have unlimited quota; regular users are capped per day
+      if (!isAdmin && (user.usage[feature] || 0) >= limit) {
         return res.status(429).json({
           success: false,
-          message: `Daily limit reached. You can only generate ${limit} ${feature} per day on the student tier. Check back tomorrow!`,
+          message: `Daily limit reached. You can only generate ${limit} ${feature.replace('_', ' ')} per day on the student tier. Check back tomorrow!`,
         });
       }
 
-      // Increment their usage and save
-      user.usage[feature] += 1;
+      user.usage[feature] = (user.usage[feature] || 0) + 1;
       await user.save();
 
       next();
